@@ -1,12 +1,158 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Multiplayer Shooter</title>
-</head>
-<body>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="client.js"></script>
-</body>
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Neon Arena | Multiplayer Shooter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <div class="background-glow"></div>
+      <header class="top-bar">
+        <div class="logo">
+          <span class="logo-icon">◎</span>
+          <span class="logo-text">Neon Arena</span>
+        </div>
+        <div class="top-right">
+          <span class="pill pill-online">
+            <span class="dot"></span>
+            Connected
+          </span>
+          <a
+            href="https://github.com/"
+            target="_blank"
+            rel="noreferrer"
+            class="pill pill-ghost"
+          >
+            <span>View on GitHub</span>
+          </a>
+        </div>
+      </header>
+
+      <main class="main">
+        <!-- Lobby Panel -->
+        <section id="lobby-panel" class="card card-lobby">
+          <div class="card-header">
+            <h1>Create or Join a Room</h1>
+            <p>Fast-paced top-down multiplayer shooter. Invite friends and start a match.</p>
+          </div>
+
+          <div class="card-body">
+            <div class="field-row">
+              <div class="field">
+                <label for="playerName">Player name</label>
+                <div class="input-wrapper">
+                  <input
+                    id="playerName"
+                    type="text"
+                    maxlength="20"
+                    placeholder="Type your nickname"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="lobby-actions">
+              <button id="createRoomBtn" class="btn primary">
+                <span>Create Room</span>
+              </button>
+
+              <div class="divider">
+                <span>or</span>
+              </div>
+
+              <div class="join-room">
+                <div class="field">
+                  <label for="roomCode">Room code</label>
+                  <div class="input-wrapper input-with-button">
+                    <input
+                      id="roomCode"
+                      type="text"
+                      maxlength="5"
+                      placeholder="ABCDE"
+                    />
+                    <button id="joinRoomBtn" class="btn ghost-small">
+                      Join
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="room-meta" id="roomMeta"></div>
+
+            <div class="lobby-players">
+              <div class="lobby-players-header">
+                <span>Players in room</span>
+                <button id="startGameBtn" class="btn subtle" disabled>
+                  Start Game
+                </button>
+              </div>
+              <ul id="playersList"></ul>
+            </div>
+
+            <div id="lobbyError" class="alert hidden"></div>
+          </div>
+
+          <footer class="card-footer">
+            <p>
+              Controls in game:
+              <span class="kbd">WASD</span> to move,
+              <span class="kbd">Mouse</span> to aim,
+              <span class="kbd">Click</span> to shoot.
+            </p>
+          </footer>
+        </section>
+
+        <!-- Game Panel -->
+        <section id="game-panel" class="card card-game hidden">
+          <div class="game-header">
+            <div class="game-room">
+              <span class="label">Room</span>
+              <span id="roomCodeLabel" class="room-code-pill">-----</span>
+            </div>
+            <div class="game-stats">
+              <div class="stat">
+                <span class="label">HP</span>
+                <div class="hp-bar">
+                  <div id="hpBarFill" class="hp-bar-fill"></div>
+                </div>
+              </div>
+              <div class="stat">
+                <span class="label">Score</span>
+                <span id="scoreLabel" class="stat-value">0</span>
+              </div>
+            </div>
+            <button id="backToLobbyBtn" class="btn subtle small">
+              Leave Game
+            </button>
+          </div>
+
+          <div class="game-content">
+            <div class="game-canvas-wrapper">
+              <canvas id="gameCanvas"></canvas>
+              <div id="gameOverlay" class="game-overlay hidden"></div>
+            </div>
+            <aside class="scoreboard">
+              <div class="scoreboard-header">
+                <h2>Scoreboard</h2>
+              </div>
+              <ul id="scoreboardList"></ul>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+  </body>
 </html>

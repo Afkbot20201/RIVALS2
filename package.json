@@ -1,13 +1,14 @@
 {
   "name": "node-multiplayer-shooter",
   "version": "1.0.0",
-  "description": "Simple Node + Socket.IO multiplayer shooter with rooms",
+  "description": "Simple Node.js + Socket.IO top-down multiplayer shooter with rooms, ready for Render.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "socket.io": "^4.8.1"
+    "express": "^4.19.0",
+    "socket.io": "^4.8.0"
   }
 }
