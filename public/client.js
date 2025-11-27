@@ -481,3 +481,49 @@
 
   draw();
 })();
+const confirmInput = document.getElementById("auth-confirm");
+const emailInput = document.getElementById("auth-email");
+const forgotBtn = document.getElementById("forgot-btn");
+const logoutBtn = document.getElementById("logout-btn");
+
+if (localStorage.getItem("rivals2_user")) {
+  currentUsername = localStorage.getItem("rivals2_user");
+}
+
+logoutBtn.addEventListener("click", () => {
+  localStorage.removeItem("rivals2_user");
+  location.reload();
+});
+
+registerBtn.addEventListener("click", () => {
+  if (authPass.value !== confirmInput.value) {
+    setAuthError("Passwords do not match");
+    return;
+  }
+
+  socket.emit("register", {
+    username: authUser.value.trim(),
+    password: authPass.value,
+    email: emailInput.value.trim()
+  }, res => {
+    if (!res.ok) return setAuthError(res.error);
+    setAuthError("Registered! You can now log in.");
+  });
+});
+
+loginBtn.addEventListener("click", () => {
+  socket.emit("login", {
+    username: authUser.value.trim(),
+    password: authPass.value
+  }, res => {
+    if (!res.ok) return setAuthError(res.error);
+    localStorage.setItem("rivals2_user", res.username);
+    location.reload();
+  });
+});
+
+forgotBtn.addEventListener("click", () => {
+  socket.emit("requestPasswordReset", { email: emailInput.value.trim() }, res => {
+    alert(res.ok ? "Reset email sent!" : "Email not found.");
+  });
+});

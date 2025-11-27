@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head><title>Reset Password</title></head>
+<body>
+<h2>Reset Password</h2>
+<input id="newpass" type="password" placeholder="New Password"/>
+<button onclick="reset()">Reset</button>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const token = new URLSearchParams(location.search).get("token");
+function reset() {
+  socket.emit("resetPassword", { token, newPassword: newpass.value }, r => {
+    alert(r.ok ? "Password reset!" : "Invalid token");
+  });
+}
+</script>
+</body>
+</html>
