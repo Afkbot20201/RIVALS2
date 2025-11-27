@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,37 +26,47 @@
         <h1>Rivals 2 Lobby</h1>
         <p>Party up, complete tasks, and jump into fast-paced duels.</p>
       </div>
+
       <div class="card-body lobby-layout">
         <aside class="tasks-panel">
           <h3>Daily Tasks</h3>
-          <div class="task"><div class="task-title">Play duels</div><div class="task-bar"><div id="task-play-fill" class="task-bar-fill"></div></div><div class="task-meta"><span id="task-play-text">0 / 5</span></div></div>
-          <div class="task"><div class="task-title">Eliminations</div><div class="task-bar"><div id="task-elim-fill" class="task-bar-fill"></div></div><div class="task-meta"><span id="task-elim-text">0 / 15</span></div></div>
-          <div class="task"><div class="task-title">Win a duel</div><div class="task-bar"><div id="task-win-fill" class="task-bar-fill"></div></div><div class="task-meta"><span id="task-win-text">0 / 2</span></div></div>
+          <div class="task">Play duels <span>0 / 5</span></div>
+          <div class="task">Eliminations <span>0 / 15</span></div>
+          <div class="task">Win a duel <span>0 / 2</span></div>
         </aside>
 
         <div class="lobby-main">
+
+          <!-- AUTH TABS -->
           <div id="auth-panel">
-            <div class="player-name-row">
-              <label>Username</label>
-              <div class="input-wrapper"><input id="authUser" /></div>
+            <div class="auth-tabs">
+              <button id="tab-login" class="tab active">Login</button>
+              <button id="tab-register" class="tab">Register</button>
+              <button id="tab-forgot" class="tab">Forgot</button>
             </div>
-            <div class="player-name-row">
-              <label>Password</label>
-              <div class="input-wrapper"><input id="authPass" type="password" /></div>
-            </div>
-            <div class="player-name-row">
-              <label>Confirm Password</label>
-              <div class="input-wrapper"><input id="auth-confirm" type="password" /></div>
-            </div>
-            <div class="player-name-row">
-              <label>Email (optional)</label>
-              <div class="input-wrapper"><input id="auth-email" /></div>
-            </div>
-            <div style="display:flex;gap:8px">
+
+            <!-- LOGIN -->
+            <div id="login-tab" class="auth-tab">
+              <div class="player-name-row"><label>Username</label><div class="input-wrapper"><input id="login-user" /></div></div>
+              <div class="player-name-row"><label>Password</label><div class="input-wrapper"><input id="login-pass" type="password" /></div></div>
               <button id="loginBtn" class="btn join-btn">Login</button>
-              <button id="registerBtn" class="btn join-btn">Register</button>
-              <button id="forgot-btn" class="btn join-btn">Forgot?</button>
             </div>
+
+            <!-- REGISTER -->
+            <div id="register-tab" class="auth-tab hidden">
+              <div class="player-name-row"><label>Username</label><div class="input-wrapper"><input id="reg-user" /></div></div>
+              <div class="player-name-row"><label>Password</label><div class="input-wrapper"><input id="reg-pass" type="password" /></div></div>
+              <div class="player-name-row"><label>Confirm</label><div class="input-wrapper"><input id="reg-confirm" type="password" /></div></div>
+              <div class="player-name-row"><label>Email</label><div class="input-wrapper"><input id="reg-email" /></div></div>
+              <button id="registerBtn" class="btn join-btn">Register</button>
+            </div>
+
+            <!-- FORGOT -->
+            <div id="forgot-tab" class="auth-tab hidden">
+              <div class="player-name-row"><label>Email</label><div class="input-wrapper"><input id="forgot-email" /></div></div>
+              <button id="forgotBtn" class="btn join-btn">Send Reset</button>
+            </div>
+
             <div id="authError" class="alert hidden"></div>
           </div>
 
@@ -75,17 +86,6 @@
             </div>
           </div>
 
-          <div id="roomMeta" class="room-meta"></div>
-
-          <div class="players-card">
-            <div class="players-header">
-              <span>Players in room</span>
-              <button id="startGameBtn" class="btn start-btn" disabled>Start Game</button>
-            </div>
-            <ul id="playersList"></ul>
-          </div>
-
-          <div id="lobbyError" class="alert hidden"></div>
         </div>
       </div>
     </section>
