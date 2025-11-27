@@ -2,14 +2,6 @@
 (() => {
   const socket = io();
 
-
-  const authUser = document.getElementById("authUser");
-  const authPass = document.getElementById("authPass");
-  const loginBtn = document.getElementById("loginBtn");
-  const registerBtn = document.getElementById("registerBtn");
-  const authError = document.getElementById("authError");
-
-
   const lobbyPanel = document.getElementById("lobby-panel");
   const gamePanel = document.getElementById("game-panel");
 
@@ -39,7 +31,6 @@
   const ctx = gameCanvas.getContext("2d");
 
   let currentRoomCode = null;
-  let currentUsername = null;
   let currentPlayerId = null;
   let isHost = false;
   let arena = { width: 1400, height: 800 };
@@ -50,48 +41,6 @@
   let mouseDown = false;
   let lastShootTime = 0;
   const SHOOT_COOLDOWN = 200;
-
-
-  function setAuthError(msg) {
-    if (!msg) {
-      authError.classList.add("hidden");
-      authError.textContent = "";
-    } else {
-      authError.classList.remove("hidden");
-      authError.textContent = msg;
-    }
-  }
-
-  loginBtn.addEventListener("click", () => {
-    socket.emit("login", {
-      username: authUser.value.trim(),
-      password: authPass.value
-    }, res => {
-      if (!res.ok) {
-        setAuthError(res.error);
-        return;
-      }
-      setAuthError("");
-      currentUsername = res.username;
-      playerNameInput.value = res.username;
-      playerNameInput.disabled = true;
-      document.getElementById("auth-panel").style.display = "none";
-      document.getElementById("lobby-panel").style.display = "block";
-    });
-  });
-
-  registerBtn.addEventListener("click", () => {
-    socket.emit("register", {
-      username: authUser.value.trim(),
-      password: authPass.value
-    }, res => {
-      if (!res.ok) {
-        setAuthError(res.error);
-        return;
-      }
-      setAuthError("Registered! You can now log in.");
-    });
-  });
 
   function setLobbyError(msg) {
     if (!msg) {
@@ -244,7 +193,6 @@
   }
 
   function handleCreateRoom() {
-    if (!currentUsername) { setLobbyError("Please log in first."); return; }
     const name = playerNameInput.value.trim();
     if (!name) {
       setLobbyError("Please enter a player name.");
@@ -270,7 +218,6 @@
   }
 
   function handleJoinRoom() {
-    if (!currentUsername) { setLobbyError("Please log in first."); return; }
     const name = playerNameInput.value.trim();
     const code = roomCodeInput.value.trim().toUpperCase();
     if (!name) {
