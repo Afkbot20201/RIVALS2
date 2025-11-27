@@ -1,144 +1,389 @@
 
-require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+
+const mongoose = require("mongoose");
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error("❌ MongoDB Error:", err));
+
+const UserSchema = new mongoose.Schema({
+  username: { type: String, unique: true },
+  email: { type: String, default: null },
+  password: String,
+  resetToken: String,
+  resetTokenExpiry: Date,
+  created: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model("User", UserSchema);
+
+const path = require("path");
+
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const { MongoClient } = require("mongodb");
-const { Resend } = require("resend");
+
+
+
+
+// removed file-based users {
+  return fs.readJsonSync(USERS_FILE, { throws: false }) || {};
+}
+// removed file-based users(users) {
+  fs.writeJsonSync(USERS_FILE, users, { spaces: 2 });
+}
+
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const client = new MongoClient(process.env.MONGO_URI);
-const resend = new Resend(process.env.RESEND_API_KEY);
+const PORT = process.env.PORT || 3000;
 
-let usersCollection;
+app.use(express.static(path.join(__dirname, "public")));
 
-async function connectDB() {
-  try {
-    await client.connect();
-    const db = client.db("rivals2");
-    usersCollection = db.collection("users");
-    console.log("✅ MongoDB Connected");
-  } catch (err) {
-    console.error("❌ MongoDB Error:", err);
+const rooms = {};
+
+const TICK_RATE = 30;
+const DT = 1 / TICK_RATE;
+
+const ARENA_WIDTH = 1400;
+const ARENA_HEIGHT = 800;
+const PLAYER_SPEED = 260;
+const BULLET_SPEED = 520;
+const PLAYER_RADIUS = 18;
+const BULLET_RADIUS = 5;
+const PLAYER_MAX_HP = 100;
+const BULLET_DAMAGE = 25;
+
+function randomPos() {
+  const margin = 80;
+  return {
+    x: margin + Math.random() * (ARENA_WIDTH - margin * 2),
+    y: margin + Math.random() * (ARENA_HEIGHT - margin * 2)
+  };
+}
+
+function createRoom() {
+  let code;
+  do {
+    code = Math.random().toString(36).substring(2, 7).toUpperCase();
+  } while (rooms[code]);
+  rooms[code] = {
+    code,
+    hostId: null,
+    status: "lobby",
+    players: {},
+    bullets: [],
+    lastBulletId: 0
+  };
+  return rooms[code];
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function removePlayer(socketId) {
+  for (const code of Object.keys(rooms)) {
+    const room = rooms[code];
+    if (room.players[socketId]) {
+      delete room.players[socketId];
+      if (room.hostId === socketId) {
+        const ids = Object.keys(room.players);
+        room.hostId = ids.length ? ids[0] : null;
+      }
+      if (Object.keys(room.players).length === 0) {
+        delete rooms[code];
+      } else {
+        io.to(code).emit("lobbyUpdate", {
+          players: Object.values(room.players).map(p => ({
+            id: p.id,
+            name: p.name,
+            score: p.score
+          })),
+          hostId: room.hostId
+        });
+      }
+    }
   }
 }
-connectDB();
-
-app.use(express.json());
-app.use(express.static("public"));
-
-const sessions = {};
 
 io.on("connection", socket => {
-  console.log("User connected");
 
-  socket.on("register", async (data, cb) => {
-    try {
-      const { username, password, email } = data;
+  // ===== MONGO AUTH =====
+  socket.on("register", async ({ username, password }, cb) => {
+    if (!username || !password) return cb({ ok:false, error:"Missing fields" });
 
-      if (!username || !password)
-        return cb({ ok: false, error: "Missing credentials" });
+    const exist = await User.findOne({ username });
+    if (exist) return cb({ ok:false, error:"Username already taken" });
 
-      const existing = await usersCollection.findOne({ username });
-      if (existing)
-        return cb({ ok: false, error: "Username already exists" });
+    const hash = await bcrypt.hash(password, 10);
+    await User.create({ username, password: hash });
 
-      const hash = await bcrypt.hash(password, 10);
+    cb({ ok:true });
+  });
 
-      await usersCollection.insertOne({
-        username,
-        password: hash,
-        email,
-        createdAt: new Date()
-      });
+  socket.on("login", async ({ username, password }, cb) => {
+    const user = await User.findOne({ username });
+    if (!user) return cb({ ok:false, error:"Invalid login" });
 
-      cb({ ok: true });
-    } catch (err) {
-      cb({ ok: false, error: "Registration failed" });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return cb({ ok:false, error:"Invalid login" });
+
+    socket.username = username;
+    cb({ ok:true, username });
+  });
+
+
+  socket.on("register", async ({ username, password }, cb) => {
+    const users = loadUsers();
+    if (!username || !password) return cb({ ok:false, error:"Missing fields" });
+    if (users[username]) return cb({ ok:false, error:"Username already taken" });
+
+    const hash = await bcrypt.hash(password, 10);
+    users[username] = { password: hash, created: Date.now(), wins:0, kills:0 };
+    saveUsers(users);
+
+    cb({ ok:true });
+  });
+
+  socket.on("login", async ({ username, password }, cb) => {
+    const users = loadUsers();
+    const user = users[username];
+    if (!user) return cb({ ok:false, error:"Invalid login" });
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return cb({ ok:false, error:"Invalid login" });
+
+    socket.username = username;
+    cb({ ok:true, username });
+  });
+
+  console.log("Client connected", socket.id);
+
+  socket.on("createRoom", ({ name }, cb) => {
+    if (!socket.username) return cb({ ok:false, error:"Not logged in" });
+    if (!name || !name.trim()) return cb && cb({ ok: false, error: "Name required" });
+    const room = createRoom();
+    const spawn = randomPos();
+    const player = {
+      id: socket.id,
+      name: socket.username,
+      x: spawn.x,
+      y: spawn.y,
+      angle: 0,
+      hp: PLAYER_MAX_HP,
+      score: 0,
+      input: { up: false, down: false, left: false, right: false }
+    };
+    room.players[socket.id] = player;
+    room.hostId = socket.id;
+    socket.join(room.code);
+    cb && cb({
+      ok: true,
+      roomCode: room.code,
+      playerId: socket.id,
+      isHost: true,
+      arena: { width: ARENA_WIDTH, height: ARENA_HEIGHT }
+    });
+    io.to(room.code).emit("lobbyUpdate", {
+      players: Object.values(room.players).map(p => ({
+        id: p.id,
+        name: p.name,
+        score: p.score
+      })),
+      hostId: room.hostId
+    });
+  });
+
+  socket.on("joinRoom", ({ name, roomCode }, cb) => {
+    if (!socket.username) return cb({ ok:false, error:"Not logged in" });
+    const code = (roomCode || "").trim().toUpperCase();
+    const room = rooms[code];
+    if (!room) return cb && cb({ ok: false, error: "Room not found" });
+    if (room.status !== "lobby") return cb && cb({ ok: false, error: "Game already started" });
+    if (!name || !name.trim()) return cb && cb({ ok: false, error: "Name required" });
+
+    const spawn = randomPos();
+    const player = {
+      id: socket.id,
+      name: socket.username,
+      x: spawn.x,
+      y: spawn.y,
+      angle: 0,
+      hp: PLAYER_MAX_HP,
+      score: 0,
+      input: { up: false, down: false, left: false, right: false }
+    };
+    room.players[socket.id] = player;
+    socket.join(room.code);
+    cb && cb({
+      ok: true,
+      roomCode: room.code,
+      playerId: socket.id,
+      isHost: socket.id === room.hostId,
+      arena: { width: ARENA_WIDTH, height: ARENA_HEIGHT }
+    });
+    io.to(room.code).emit("lobbyUpdate", {
+      players: Object.values(room.players).map(p => ({
+        id: p.id,
+        name: p.name,
+        score: p.score
+      })),
+      hostId: room.hostId
+    });
+  });
+
+  socket.on("startGame", ({ roomCode }) => {
+    const code = (roomCode || "").trim().toUpperCase();
+    const room = rooms[code];
+    if (!room) return;
+    if (room.hostId !== socket.id) return;
+    room.status = "running";
+    room.bullets = [];
+    room.lastBulletId = 0;
+    for (const p of Object.values(room.players)) {
+      const spawn = randomPos();
+      p.x = spawn.x;
+      p.y = spawn.y;
+      p.hp = PLAYER_MAX_HP;
+      p.score = p.score || 0;
+      p.input = { up: false, down: false, left: false, right: false };
+    }
+    io.to(room.code).emit("gameStarted");
+  });
+
+  socket.on("playerInput", ({ roomCode, input }) => {
+    const code = (roomCode || "").trim().toUpperCase();
+    const room = rooms[code];
+    if (!room) return;
+    const p = room.players[socket.id];
+    if (!p) return;
+    if (input && typeof input === "object") {
+      p.input = {
+        up: !!input.up,
+        down: !!input.down,
+        left: !!input.left,
+        right: !!input.right
+      };
+      if (typeof input.angle === "number" && Number.isFinite(input.angle)) {
+        p.angle = input.angle;
+      }
     }
   });
 
-  socket.on("login", async (data, cb) => {
-    try {
-      const { username, password } = data;
-      const user = await usersCollection.findOne({ username });
-
-      if (!user) return cb({ ok: false, error: "User not found" });
-
-      const match = await bcrypt.compare(password, user.password);
-      if (!match) return cb({ ok: false, error: "Wrong password" });
-
-      const sessionToken = crypto.randomBytes(32).toString("hex");
-      sessions[sessionToken] = username;
-
-      cb({ ok: true, username, token: sessionToken });
-    } catch (err) {
-      cb({ ok: false, error: "Login failed" });
-    }
-  });
-
-  socket.on("requestPasswordReset", async (data, cb) => {
-    try {
-      const { email } = data;
-      if (!email) return cb({ ok: false });
-
-      const user = await usersCollection.findOne({ email });
-      if (!user) return cb({ ok: false });
-
-      const token = crypto.randomBytes(32).toString("hex");
-      const expiry = Date.now() + 1000 * 60 * 15;
-
-      await usersCollection.updateOne(
-        { email },
-        { $set: { resetToken: token, resetExpiry: expiry } }
-      );
-
-      const resetLink = `https://rivals2.onrender.com/reset.html?token=${token}`;
-
-      await resend.emails.send({
-        from: "Rivals2 <no-reply@rivals2>",
-        to: email,
-        subject: "Password Reset",
-        html: `<p>Reset your password:</p><a href="${resetLink}">${resetLink}</a>`
-      });
-
-      cb({ ok: true });
-    } catch (err) {
-      cb({ ok: false });
-    }
-  });
-
-  const rooms = {};
-
-  socket.on("createRoom", (_, cb) => {
-    const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-    rooms[code] = [socket.id];
-    socket.join(code);
-    cb({ ok: true, roomCode: code });
-    io.to(code).emit("roomUpdate", rooms[code]);
-  });
-
-  socket.on("joinRoom", (data, cb) => {
-    const { roomCode } = data;
-    if (!rooms[roomCode]) return cb({ ok: false });
-
-    rooms[roomCode].push(socket.id);
-    socket.join(roomCode);
-    cb({ ok: true });
-    io.to(roomCode).emit("roomUpdate", rooms[code]);
+  socket.on("shoot", ({ roomCode, angle }) => {
+    const code = (roomCode || "").trim().toUpperCase();
+    const room = rooms[code];
+    if (!room) return;
+    const p = room.players[socket.id];
+    if (!p || room.status !== "running") return;
+    const a = typeof angle === "number" && Number.isFinite(angle) ? angle : p.angle;
+    const cos = Math.cos(a);
+    const sin = Math.sin(a);
+    const bullet = {
+      id: ++room.lastBulletId,
+      x: p.x + cos * (PLAYER_RADIUS + 8),
+      y: p.y + sin * (PLAYER_RADIUS + 8),
+      vx: cos * BULLET_SPEED,
+      vy: sin * BULLET_SPEED,
+      ownerId: p.id
+    };
+    room.bullets.push(bullet);
   });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected");
+    console.log("Client disconnected", socket.id);
+    removePlayer(socket.id);
   });
 });
 
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () =>
-  console.log("Rivals 2 server listening on", PORT)
-);
+setInterval(() => {
+  for (const code of Object.keys(rooms)) {
+    const room = rooms[code];
+    if (room.status !== "running") continue;
+
+    // update players
+    for (const p of Object.values(room.players)) {
+      const i = p.input || {};
+      let dx = 0, dy = 0;
+      if (i.up) dy -= 1;
+      if (i.down) dy += 1;
+      if (i.left) dx -= 1;
+      if (i.right) dx += 1;
+      if (dx !== 0 || dy !== 0) {
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        dx /= len;
+        dy /= len;
+      }
+      p.x += dx * PLAYER_SPEED * DT;
+      p.y += dy * PLAYER_SPEED * DT;
+      p.x = clamp(p.x, PLAYER_RADIUS, ARENA_WIDTH - PLAYER_RADIUS);
+      p.y = clamp(p.y, PLAYER_RADIUS, ARENA_HEIGHT - PLAYER_RADIUS);
+    }
+
+    // update bullets
+    const alive = [];
+    for (const b of room.bullets) {
+      b.x += b.vx * DT;
+      b.y += b.vy * DT;
+      if (
+        b.x < -50 || b.x > ARENA_WIDTH + 50 ||
+        b.y < -50 || b.y > ARENA_HEIGHT + 50
+      ) {
+        continue;
+      }
+      let hit = false;
+      for (const p of Object.values(room.players)) {
+        if (p.id === b.ownerId || p.hp <= 0) continue;
+        const dx = p.x - b.x;
+        const dy = p.y - b.y;
+        const rr = PLAYER_RADIUS + BULLET_RADIUS;
+        if (dx * dx + dy * dy <= rr * rr) {
+          hit = true;
+          p.hp -= BULLET_DAMAGE;
+          if (p.hp <= 0) {
+            p.hp = 0;
+            const killer = room.players[b.ownerId];
+            if (killer) killer.score = (killer.score || 0) + 1;
+            // respawn
+            const spawn = randomPos();
+            p.x = spawn.x;
+            p.y = spawn.y;
+            p.hp = PLAYER_MAX_HP;
+          }
+          break;
+        }
+      }
+      if (!hit) alive.push(b);
+    }
+    room.bullets = alive;
+
+    const state = {
+      players: Object.values(room.players).map(p => ({
+        id: p.id,
+        name: p.name,
+        x: p.x,
+        y: p.y,
+        angle: p.angle,
+        hp: p.hp,
+        score: p.score || 0
+      })),
+      bullets: room.bullets.map(b => ({
+        id: b.id,
+        x: b.x,
+        y: b.y
+      })),
+      arena: { width: ARENA_WIDTH, height: ARENA_HEIGHT }
+    };
+
+    io.to(code).emit("gameState", state);
+  }
+}, 1000 / TICK_RATE);
+
+server.listen(PORT, () => {
+  console.log("Rivals 2 server listening on", PORT);
+});
