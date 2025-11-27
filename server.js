@@ -51,6 +51,8 @@ const ARENA_WIDTH = 1200;
 const ARENA_HEIGHT = 700;
 const PLAYER_MAX_HP = 100;
 const BULLET_DAMAGE = 25;
+const MATCH_TIME = 180; // 3 minutes
+const POWERUP_INTERVAL = 12;
 
 // --- Helpers ---
 
@@ -196,6 +198,11 @@ io.on("connection", socket => {
     }
     room.bullets = [];
     room.lastBulletId = 0;
+        room.matchTime = MATCH_TIME;
+        room.lastPowerup = Date.now();
+        room.powerups = [];
+        room.chat = [];
+
 
     io.to(room.code).emit("gameStarted");
   });
@@ -245,7 +252,17 @@ io.on("connection", socket => {
     room.bullets.push(bullet);
   });
 
-  socket.on("disconnect", () => {
+  
+      socket.on("chatMessage", ({ roomCode, message }) => {
+        const room = rooms[roomCode];
+        if (!room) return;
+        const p = room.players[socket.id];
+        if (!p || !message) return;
+        io.to(roomCode).emit("chatMessage", { name: p.name, message });
+      });
+
+      socket.on("disconnect", () => {
+
     console.log("Client disconnected", socket.id);
     removePlayerFromRoom(socket.id);
   });
@@ -341,7 +358,17 @@ setInterval(() => {
       serverTime: now
     };
 
-    io.to(code).emit("gameState", state);
+    
+        if (room.matchTime > 0) {
+          room.matchTime -= dt;
+        } else {
+          const winner = Object.values(room.players).sort((a,b)=>b.score-a.score)[0];
+          io.to(code).emit("gameOver", { winner: winner?.name || "No one" });
+          room.status = "lobby";
+        }
+
+        io.to(code).emit("gameState", { ...state, matchTime: Math.ceil(room.matchTime) });
+
   }
 }, 1000 / TICK_RATE);
 

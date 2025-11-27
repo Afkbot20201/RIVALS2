@@ -527,3 +527,35 @@
   setTimeout(resizeCanvas, 0);
   gameLoop();
 })();
+
+
+// --- Chat System ---
+const chatInput = document.getElementById("chatInput");
+const chatBox = document.getElementById("chatBox");
+
+if (chatInput) {
+  chatInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && chatInput.value.trim()) {
+      socket.emit("chatMessage", {
+        roomCode: currentRoomCode,
+        message: chatInput.value.trim()
+      });
+      chatInput.value = "";
+    }
+  });
+}
+
+socket.on("chatMessage", ({ name, message }) => {
+  const div = document.createElement("div");
+  div.innerHTML = "<strong>" + name + ":</strong> " + message;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+// --- Game Over Screen ---
+socket.on("gameOver", ({ winner }) => {
+  const overlay = document.getElementById("gameOverlay");
+  overlay.innerHTML = "🏆 Winner: " + winner + "<br><br>Returning to lobby...";
+  overlay.classList.remove("hidden");
+  setTimeout(() => window.location.reload(), 6000);
+});

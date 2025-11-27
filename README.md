@@ -53,3 +53,12 @@ Socket.IO uses the same HTTP service, so you don’t need a separate WebSocket s
   - `PLAYER_MAX_HP`, `BULLET_DAMAGE`
 - UI styles live in `public/style.css`.
 - Client-side logic is in `public/client.js`.
+
+
+New Features Added:
+- Lobby Chat
+- Kill Feed (Server side)
+- Teams & Colors
+- Power-Ups
+- Match Timer & Win Screen
+- Roblox-inspired Hub UI
