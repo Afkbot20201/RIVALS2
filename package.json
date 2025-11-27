@@ -1,11 +1,10 @@
 {
-  "name": "node-multiplayer-shooter",
+  "name": "rivals-2",
   "version": "1.0.0",
-  "description": "Simple Node.js + Socket.IO top-down multiplayer shooter with rooms, ready for Render.",
+  "description": "Rivals 2 multiplayer shooter",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.19.0",
