@@ -373,9 +373,7 @@
       isHost = resp.isHost;
       roomCodeLabel.textContent = currentRoomCode;
       setRoomMeta(currentRoomCode);
-      switchToGame();
-      gameOverlay.textContent = "Waiting for the host to start the game...";
-      gameOverlay.classList.remove("hidden");
+      // Stay in lobby; host can see players list and Start Game button.
     });
   }
 
@@ -407,9 +405,7 @@
       isHost = resp.isHost;
       roomCodeLabel.textContent = currentRoomCode;
       setRoomMeta(currentRoomCode);
-      switchToGame();
-      gameOverlay.textContent = "Waiting for the host to start the game...";
-      gameOverlay.classList.remove("hidden");
+      // Stay in lobby; host can see players list and Start Game button.
     });
   }
 
@@ -545,12 +541,14 @@ if (chatInput) {
   });
 }
 
-socket.on("chatMessage", ({ name, message }) => {
-  const div = document.createElement("div");
-  div.innerHTML = "<strong>" + name + ":</strong> " + message;
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
-});
+if (chatBox) {
+  socket.on("chatMessage", ({ name, message }) => {
+    const div = document.createElement("div");
+    div.innerHTML = "<strong>" + name + ":</strong> " + message;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+}
 
 // --- Game Over Screen ---
 socket.on("gameOver", ({ winner }) => {
