@@ -4,6 +4,19 @@ const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
 
+const bcrypt = require("bcrypt");
+const fs = require("fs-extra");
+
+const USERS_FILE = path.join(__dirname, "users.json");
+
+function loadUsers() {
+  return fs.readJsonSync(USERS_FILE, { throws: false }) || {};
+}
+function saveUsers(users) {
+  fs.writeJsonSync(USERS_FILE, users, { spaces: 2 });
+}
+
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -80,15 +93,41 @@ function removePlayer(socketId) {
 }
 
 io.on("connection", socket => {
+
+  socket.on("register", async ({ username, password }, cb) => {
+    const users = loadUsers();
+    if (!username || !password) return cb({ ok:false, error:"Missing fields" });
+    if (users[username]) return cb({ ok:false, error:"Username already taken" });
+
+    const hash = await bcrypt.hash(password, 10);
+    users[username] = { password: hash, created: Date.now(), wins:0, kills:0 };
+    saveUsers(users);
+
+    cb({ ok:true });
+  });
+
+  socket.on("login", async ({ username, password }, cb) => {
+    const users = loadUsers();
+    const user = users[username];
+    if (!user) return cb({ ok:false, error:"Invalid login" });
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return cb({ ok:false, error:"Invalid login" });
+
+    socket.username = username;
+    cb({ ok:true, username });
+  });
+
   console.log("Client connected", socket.id);
 
   socket.on("createRoom", ({ name }, cb) => {
+    if (!socket.username) return cb({ ok:false, error:"Not logged in" });
     if (!name || !name.trim()) return cb && cb({ ok: false, error: "Name required" });
     const room = createRoom();
     const spawn = randomPos();
     const player = {
       id: socket.id,
-      name: name.trim().slice(0, 20),
+      name: socket.username,
       x: spawn.x,
       y: spawn.y,
       angle: 0,
@@ -117,6 +156,7 @@ io.on("connection", socket => {
   });
 
   socket.on("joinRoom", ({ name, roomCode }, cb) => {
+    if (!socket.username) return cb({ ok:false, error:"Not logged in" });
     const code = (roomCode || "").trim().toUpperCase();
     const room = rooms[code];
     if (!room) return cb && cb({ ok: false, error: "Room not found" });
@@ -126,7 +166,7 @@ io.on("connection", socket => {
     const spawn = randomPos();
     const player = {
       id: socket.id,
-      name: name.trim().slice(0, 20),
+      name: socket.username,
       x: spawn.x,
       y: spawn.y,
       angle: 0,
