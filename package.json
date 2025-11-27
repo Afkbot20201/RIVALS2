@@ -1,0 +1,15 @@
+{
+  "name": "rivals-2-polished",
+  "version": "1.0.0",
+  "description": "Rivals 2 - Roblox-inspired lobby with real multiplayer shooting",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "socket.io": "^4.8.0",
+    "bcrypt": "^5.1.0",
+    "fs-extra": "^11.2.0"
+  }
+}
