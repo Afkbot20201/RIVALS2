@@ -1,7 +1,6 @@
 {
-  "name": "rivals-2",
-  "version": "1.0.0",
-  "description": "Rivals 2 multiplayer shooter",
+  "name": "rivals-2-roblox",
+  "version": "2.0.0",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

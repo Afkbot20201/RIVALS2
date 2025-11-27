@@ -6,20 +6,27 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="lobby">
-  <h1>Rivals 2</h1>
-  <input id="name" placeholder="Username">
-  <button id="playBtn">PLAY</button>
-  <input id="roomCode" placeholder="Room Code">
-  <button id="joinBtn">JOIN</button>
-  <div id="roomInfo"></div>
-  <ul id="players"></ul>
-  <button id="startBtn" style="display:none;">START GAME</button>
 
-  <h3>Daily Tasks</h3>
-  <div>Play Duels: <span id="task-duels">0 / 5</span></div>
-  <div>Eliminations: <span id="task-elims">0 / 15</span></div>
-  <div>Wins: <span id="task-wins">0 / 2</span></div>
+<div id="lobby" class="lobby">
+  <div class="panel tasks">
+    <h3>Daily Tasks</h3>
+    <div>Play Duels: <span id="task-duels">0 / 5</span></div>
+    <div>Elims: <span id="task-elims">0 / 15</span></div>
+    <div>Wins: <span id="task-wins">0 / 2</span></div>
+  </div>
+
+  <div class="panel main">
+    <h1>Rivals 2</h1>
+    <input id="name" placeholder="Username">
+    <button id="playBtn" class="big-play">PLAY</button>
+
+    <input id="roomCode" placeholder="Room Code">
+    <button id="joinBtn">JOIN</button>
+
+    <div id="roomInfo"></div>
+    <ul id="players"></ul>
+    <button id="startBtn" style="display:none;">START GAME</button>
+  </div>
 
   <div class="hub">
     <button class="hub-btn">Backpack</button>
@@ -29,7 +36,7 @@
   </div>
 </div>
 
-<div id="game" style="display:none;">
+<div id="game" class="game" style="display:none;">
   <canvas id="canvas"></canvas>
 </div>
 

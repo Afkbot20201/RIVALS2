@@ -1,6 +1,10 @@
 
-body{margin:0;font-family:sans-serif;background:#121212;color:white}
-#lobby{text-align:center;padding-top:30px}
-button{padding:10px 20px;margin:5px}
-.hub{margin-top:20px}
-canvas{background:black;width:100vw;height:100vh}
+body { margin:0; font-family:Arial; background:#0f172a; color:white; }
+.lobby { display:flex; height:100vh; padding:20px; gap:20px; }
+.panel { background:rgba(0,0,0,0.6); border-radius:16px; padding:20px; }
+.tasks { width:220px; }
+.main { flex:1; text-align:center; }
+.big-play { background:#22c55e; border:none; padding:16px 50px; border-radius:18px; font-size:18px; font-weight:bold; margin:10px; }
+.hub { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:14px; }
+.hub-btn { background:#1e293b; border:none; border-radius:12px; padding:10px 20px; color:white; }
+canvas { background:black; width:100vw; height:100vh; }

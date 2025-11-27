@@ -1,7 +1,4 @@
-
-# Rivals 2
-
-Node.js multiplayer shooter for Render deployment.
-
+# Rivals 2 - Roblox Style
+Multiplayer shooter with real movement and shooting.
 npm install
 npm start
