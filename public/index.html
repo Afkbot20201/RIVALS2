@@ -25,7 +25,7 @@
 
   <main class="main">
     <!-- Lobby -->
-    <section id="lobby-panel" class="card card-lobby">
+    <section id="lobby-panel" class="card card-lobby" style="display:none;">
       <div class="card-header">
         <h1>Rivals 2 Lobby</h1>
         <p>Party up, complete tasks, and jump into fast-paced duels.</p>
@@ -58,7 +58,7 @@
 
         <div class="lobby-main">
           
-<div id="auth-panel" style="margin-bottom:14px;">
+<div id="auth-panel" style="margin-bottom:14px;" style="display:block;">
   <div class="player-name-row">
     <label>Username</label>
     <div class="input-wrapper">
@@ -165,5 +165,11 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
+
+<script>
+document.getElementById("auth-panel").style.display = "block";
+document.getElementById("lobby-panel").style.display = "none";
+</script>
+
 </body>
 </html>

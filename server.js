@@ -2,6 +2,28 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+
+const mongoose = require("mongoose");
+
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log("MongoDB connected");
+}).catch(err => {
+  console.error("MongoDB connection error:", err);
+});
+
+const UserSchema = new mongoose.Schema({
+  username: { type: String, unique: true },
+  password: String,
+  kills: { type: Number, default: 0 },
+  wins: { type: Number, default: 0 },
+  created: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model("User", UserSchema);
+
 const path = require("path");
 
 const bcrypt = require("bcrypt");
@@ -93,6 +115,30 @@ function removePlayer(socketId) {
 }
 
 io.on("connection", socket => {
+
+  socket.on("register", async ({ username, password }, cb) => {
+    if (!username || !password) return cb({ ok:false, error:"Missing fields" });
+
+    const existing = await User.findOne({ username });
+    if (existing) return cb({ ok:false, error:"Username already taken" });
+
+    const hash = await bcrypt.hash(password, 10);
+    await User.create({ username, password: hash });
+
+    cb({ ok:true });
+  });
+
+  socket.on("login", async ({ username, password }, cb) => {
+    const user = await User.findOne({ username });
+    if (!user) return cb({ ok:false, error:"Invalid login" });
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return cb({ ok:false, error:"Invalid login" });
+
+    socket.username = username;
+    cb({ ok:true, username });
+  });
+
 
   socket.on("register", async ({ username, password }, cb) => {
     const users = loadUsers();

@@ -75,8 +75,8 @@
       currentUsername = res.username;
       playerNameInput.value = res.username;
       playerNameInput.disabled = true;
-      const authPanel = document.getElementById("auth-panel");
-      if (authPanel) authPanel.style.display = "none";
+      document.getElementById("auth-panel").style.display = "none";
+      document.getElementById("lobby-panel").style.display = "block";
     });
   });
 

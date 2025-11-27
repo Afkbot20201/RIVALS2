@@ -38,8 +38,7 @@ body,html {
              #020617;
   border:1px solid rgba(148,163,184,0.25);
   box-shadow:var(--shadow-soft);
-
-  position:relative;}
+}
 
 .top-bar {
   display:flex;
@@ -563,30 +562,4 @@ body,html {
 @media (max-width: 900px) {
   .lobby-layout { grid-template-columns:1fr; }
   .tasks-panel { order:2; }
-}
-
-
-/* Auth overlay */
-#auth-panel {
-  position:absolute;
-  inset:0;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  background:rgba(15,23,42,0.96);
-  z-index:20;
-}
-
-#auth-panel .player-name-row {
-  width:260px;
-}
-
-#auth-panel .input-wrapper {
-  width:100%;
-}
-
-#auth-panel .btn {
-  flex:1;
-  justify-content:center;
 }
