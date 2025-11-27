@@ -1,5 +1,5 @@
 
-# Neon Arena – Node Multiplayer Shooter
+# Rivals 2 – Node Multiplayer Shooter
 
 Simple real-time multiplayer top-down shooter built with **Node.js**, **Express**, and **Socket.IO**, with a modern neon-dark UI. Includes room creation, joining, and host-controlled game start. Designed to run locally and on **Render** as a single Node service.
 
