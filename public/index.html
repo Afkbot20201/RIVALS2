@@ -25,7 +25,6 @@
         <h1>Rivals 2 Lobby</h1>
         <p>Party up, complete tasks, and jump into fast-paced duels.</p>
       </div>
-
       <div class="card-body lobby-layout">
         <aside class="tasks-panel">
           <h3>Daily Tasks</h3>
@@ -35,39 +34,57 @@
         </aside>
 
         <div class="lobby-main">
-
-          <!-- AUTH PANEL -->
           <div id="auth-panel">
-            <div class="player-name-row"><label>Username</label><div class="input-wrapper"><input id="authUser" placeholder="Username" /></div></div>
-            <div class="player-name-row"><label>Password</label><div class="input-wrapper"><input id="authPass" type="password" placeholder="Password" /></div></div>
-            <div id="confirmRow" class="player-name-row hidden"><label>Confirm Password</label><div class="input-wrapper"><input id="auth-confirm" type="password" placeholder="Confirm password" /></div></div>
-            <div id="emailRow" class="player-name-row hidden"><label>Email (optional)</label><div class="input-wrapper"><input id="auth-email" placeholder="Email" /></div></div>
-
-            <div style="display:flex; gap:8px; margin-top:8px;">
+            <div class="player-name-row">
+              <label>Username</label>
+              <div class="input-wrapper"><input id="authUser" /></div>
+            </div>
+            <div class="player-name-row">
+              <label>Password</label>
+              <div class="input-wrapper"><input id="authPass" type="password" /></div>
+            </div>
+            <div class="player-name-row">
+              <label>Confirm Password</label>
+              <div class="input-wrapper"><input id="auth-confirm" type="password" /></div>
+            </div>
+            <div class="player-name-row">
+              <label>Email (optional)</label>
+              <div class="input-wrapper"><input id="auth-email" /></div>
+            </div>
+            <div style="display:flex;gap:8px">
               <button id="loginBtn" class="btn join-btn">Login</button>
               <button id="registerBtn" class="btn join-btn">Register</button>
-              <button id="forgot-btn" class="btn join-btn hidden">Forgot?</button>
+              <button id="forgot-btn" class="btn join-btn">Forgot?</button>
             </div>
             <div id="authError" class="alert hidden"></div>
           </div>
 
-          <div class="player-name-row"><label>Player name</label><div class="input-wrapper"><input id="playerName" maxlength="20" placeholder="Type your nickname" /></div></div>
+          <div class="player-name-row">
+            <label>Player name</label>
+            <div class="input-wrapper"><input id="playerName" /></div>
+          </div>
+
           <div class="play-row">
             <button id="createRoomBtn" class="btn play-btn">Play (Create Room)</button>
             <div class="join-area">
               <span class="join-label">Join by code</span>
               <div class="input-wrapper join-wrapper">
-                <input id="roomCode" maxlength="5" placeholder="ABCDE" />
+                <input id="roomCode" />
                 <button id="joinRoomBtn" class="btn join-btn">Join</button>
               </div>
             </div>
           </div>
 
           <div id="roomMeta" class="room-meta"></div>
+
           <div class="players-card">
-            <div class="players-header"><span>Players in room</span><button id="startGameBtn" class="btn start-btn" disabled>Start Game</button></div>
+            <div class="players-header">
+              <span>Players in room</span>
+              <button id="startGameBtn" class="btn start-btn" disabled>Start Game</button>
+            </div>
             <ul id="playersList"></ul>
           </div>
+
           <div id="lobbyError" class="alert hidden"></div>
         </div>
       </div>
