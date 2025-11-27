@@ -59,18 +59,36 @@
         <div class="lobby-main">
           
 <div id="auth-panel" style="margin-bottom:14px;">
-  
-          </div>
-
-          
-<div class="player-name-row">
-  <label>Logged in as</label>
-  <div class="input-wrapper">
-    <input id="currentUsername" disabled />
+  <div class="player-name-row">
+    <label>Username</label>
+    <div class="input-wrapper">
+      <input id="authUser" placeholder="Username" />
+    </div>
   </div>
+
+  <div class="player-name-row">
+    <label>Password</label>
+    <div class="input-wrapper">
+      <input id="authPass" type="password" placeholder="Password" />
+    </div>
+  </div>
+
+  <div style="display:flex; gap:8px; margin-top:8px;">
+    <button id="loginBtn" class="btn join-btn">Login</button>
+    <button id="registerBtn" class="btn join-btn">Register</button>
+  </div>
+
+  <div id="authError" class="alert hidden"></div>
 </div>
 
-<div class="play-row">
+<div class="player-name-row">
+            <label>Player name</label>
+            <div class="input-wrapper">
+              <input id="playerName" maxlength="20" placeholder="Type your nickname" />
+            </div>
+          </div>
+
+          <div class="play-row">
             <button id="createRoomBtn" class="btn play-btn">
               Play (Create Room)
             </button>
