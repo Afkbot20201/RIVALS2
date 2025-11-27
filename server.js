@@ -1,146 +1,167 @@
-
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const mongoose = require("mongoose");
+const path = require("path");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const { MongoClient } = require("mongodb");
-const { Resend } = require("resend");
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error("❌ MongoDB Error:", err));
+
+const UserSchema = new mongoose.Schema({
+  username: { type: String, unique: true },
+  email: { type: String, default: null },
+  password: String,
+  resetToken: String,
+  resetTokenExpiry: Date,
+  created: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model("User", UserSchema);
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const PORT = process.env.PORT || 3000;
 
-const client = new MongoClient(process.env.MONGO_URI);
-const resend = new Resend(process.env.RESEND_API_KEY);
+app.use(express.static(path.join(__dirname, "public")));
 
-let usersCollection;
+const rooms = {};
 
-async function connectDB() {
-  try {
-    await client.connect();
-    const db = client.db("rivals2");
-    usersCollection = db.collection("users");
-    console.log("✅ MongoDB Connected");
-  } catch (err) {
-    console.error("❌ MongoDB Error:", err);
+const TICK_RATE = 30;
+const DT = 1 / TICK_RATE;
+const ARENA_WIDTH = 1400;
+const ARENA_HEIGHT = 800;
+const PLAYER_SPEED = 260;
+const BULLET_SPEED = 520;
+const PLAYER_RADIUS = 18;
+const BULLET_RADIUS = 5;
+const PLAYER_MAX_HP = 100;
+const BULLET_DAMAGE = 25;
+
+function randomPos() {
+  const margin = 80;
+  return {
+    x: margin + Math.random() * (ARENA_WIDTH - margin * 2),
+    y: margin + Math.random() * (ARENA_HEIGHT - margin * 2)
+  };
+}
+
+function createRoom() {
+  let code;
+  do {
+    code = Math.random().toString(36).substring(2, 7).toUpperCase();
+  } while (rooms[code]);
+  rooms[code] = {
+    code,
+    hostId: null,
+    status: "lobby",
+    players: {},
+    bullets: [],
+    lastBulletId: 0
+  };
+  return rooms[code];
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function removePlayer(socketId) {
+  for (const code of Object.keys(rooms)) {
+    const room = rooms[code];
+    if (room.players[socketId]) {
+      delete room.players[socketId];
+      if (room.hostId === socketId) {
+        const ids = Object.keys(room.players);
+        room.hostId = ids.length ? ids[0] : null;
+      }
+      if (Object.keys(room.players).length === 0) {
+        delete rooms[code];
+      }
+    }
   }
 }
-connectDB();
-
-app.use(express.json());
-app.use(express.static("public"));
-
-const sessions = {};
 
 io.on("connection", socket => {
-  console.log("User connected");
 
-  socket.on("register", async (data, cb) => {
+  socket.on("register", async ({ username, password, email }, cb) => {
     try {
-      const { username, password, email } = data;
-
-      if (!username || !password)
-        return cb({ ok: false, error: "Missing credentials" });
-
-      const existing = await usersCollection.findOne({ username });
-      if (existing)
-        return cb({ ok: false, error: "Username already exists" });
-
+      if (!username || !password) return cb({ ok:false, error:"Missing fields" });
+      const exist = await User.findOne({ username });
+      if (exist) return cb({ ok:false, error:"Username already taken" });
       const hash = await bcrypt.hash(password, 10);
-
-      await usersCollection.insertOne({
-        username,
-        password: hash,
-        email,
-        createdAt: new Date()
-      });
-
-      cb({ ok: true });
-    } catch (err) {
-      console.error(err);
-      cb({ ok: false, error: "Registration failed" });
+      await User.create({ username, password: hash, email: email || null });
+      cb({ ok:true });
+    } catch (e) {
+      console.error(e);
+      cb({ ok:false });
     }
   });
 
-  socket.on("login", async (data, cb) => {
+  socket.on("login", async ({ username, password }, cb) => {
     try {
-      const { username, password } = data;
-      const user = await usersCollection.findOne({ username });
-
-      if (!user) return cb({ ok: false, error: "User not found" });
-
-      const match = await bcrypt.compare(password, user.password);
-      if (!match) return cb({ ok: false, error: "Wrong password" });
-
-      const sessionToken = crypto.randomBytes(32).toString("hex");
-      sessions[sessionToken] = username;
-
-      cb({ ok: true, username, token: sessionToken });
-    } catch (err) {
-      console.error(err);
-      cb({ ok: false, error: "Login failed" });
+      const user = await User.findOne({ username });
+      if (!user) return cb({ ok:false, error:"Invalid login" });
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) return cb({ ok:false, error:"Invalid login" });
+      socket.username = username;
+      cb({ ok:true, username });
+    } catch (e) {
+      console.error(e);
+      cb({ ok:false });
     }
   });
 
-  socket.on("requestPasswordReset", async (data, cb) => {
-    try {
-      const { email } = data;
-      if (!email) return cb({ ok: false });
+  console.log("Client connected", socket.id);
 
-      const user = await usersCollection.findOne({ email });
-      if (!user) return cb({ ok: false });
+  socket.on("createRoom", ({ name }, cb) => {
+    if (!socket.username) return cb({ ok:false, error:"Not logged in" });
+    const room = createRoom();
+    const spawn = randomPos();
 
-      const token = crypto.randomBytes(32).toString("hex");
-      const expiry = Date.now() + 1000 * 60 * 15;
+    room.players[socket.id] = {
+      id: socket.id,
+      name: socket.username,
+      x: spawn.x,
+      y: spawn.y,
+      angle: 0,
+      hp: PLAYER_MAX_HP,
+      score: 0,
+      input: { up:false, down:false, left:false, right:false }
+    };
 
-      await usersCollection.updateOne(
-        { email },
-        { $set: { resetToken: token, resetExpiry: expiry } }
-      );
-
-      const resetLink = `${process.env.RENDER_EXTERNAL_URL || "http://localhost:10000"}/reset.html?token=${token}`;
-
-      await resend.emails.send({
-        from: "Rivals2 <no-reply@rivals2.dev>",
-        to: email,
-        subject: "Password Reset",
-        html: `<p>Reset your password:</p><a href="${resetLink}">${resetLink}</a>`
-      });
-
-      cb({ ok: true });
-    } catch (err) {
-      console.error(err);
-      cb({ ok: false });
-    }
+    room.hostId = socket.id;
+    socket.join(room.code);
+    cb({ ok:true, roomCode: room.code, playerId: socket.id, isHost:true });
   });
 
-  const rooms = {};
+  socket.on("joinRoom", ({ roomCode }, cb) => {
+    const code = roomCode.toUpperCase();
+    const room = rooms[code];
+    if (!room) return cb({ ok:false });
 
-  socket.on("createRoom", (_, cb) => {
-    const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-    rooms[code] = [socket.id];
+    const spawn = randomPos();
+    room.players[socket.id] = {
+      id: socket.id,
+      name: socket.username,
+      x: spawn.x,
+      y: spawn.y,
+      angle: 0,
+      hp: PLAYER_MAX_HP,
+      score: 0,
+      input: { up:false, down:false, left:false, right:false }
+    };
+
     socket.join(code);
-    cb({ ok: true, roomCode: code });
-    io.to(code).emit("roomUpdate", rooms[code]);
+    cb({ ok:true, playerId: socket.id, isHost:false });
   });
 
-  socket.on("joinRoom", (data, cb) => {
-    const { roomCode } = data;
-    if (!rooms[roomCode]) return cb({ ok: false });
-
-    rooms[roomCode].push(socket.id);
-    socket.join(roomCode);
-    cb({ ok: true });
-    io.to(roomCode).emit("roomUpdate", rooms[roomCode]);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
-  });
+  socket.on("disconnect", () => removePlayer(socket.id));
 });
 
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () =>
-  console.log("Rivals 2 server listening on", PORT)
-);
+server.listen(PORT, () => {
+  console.log("Rivals 2 server listening on", PORT);
+});
