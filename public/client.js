@@ -515,3 +515,33 @@ if (logoutBtn) {
     location.reload();
   });
 }
+
+
+let currentRound = 1;
+let roundTime = 90;
+
+socket.on("roundStart", data => {
+  currentRound = data.round;
+  roundTime = data.time;
+
+  gameOverlay.textContent = "ROUND " + currentRound;
+  gameOverlay.classList.remove("hidden");
+  setTimeout(() => gameOverlay.classList.add("hidden"), 1200);
+});
+
+socket.on("roundResult", data => {
+  if (data.winnerId === currentPlayerId) {
+    gameOverlay.textContent = "ROUND WON";
+  } else if (!data.winnerId) {
+    gameOverlay.textContent = "DRAW";
+  } else {
+    gameOverlay.textContent = "ROUND LOST";
+  }
+  gameOverlay.classList.remove("hidden");
+  setTimeout(() => gameOverlay.classList.add("hidden"), 1500);
+});
+
+socket.on("matchEnd", () => {
+  gameOverlay.textContent = "MATCH FINISHED";
+  gameOverlay.classList.remove("hidden");
+});

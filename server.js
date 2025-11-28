@@ -224,6 +224,15 @@ io.on("connection", socket => {
     if (!room || room.hostId !== socket.id) return;
 
     room.status = "running";
+
+    room.round = 1;
+    room.roundWins = {};
+    room.roundTimer = 90;
+
+    for (const id of Object.keys(room.players)) {
+      room.roundWins[id] = 0;
+    }
+
     room.bullets = [];
     room.lastBulletId = 0;
 
@@ -297,11 +306,35 @@ setInterval(() => {
         const dy = p.y - b.y;
         if (dx*dx + dy*dy <= (PLAYER_RADIUS+BULLET_RADIUS)**2) {
           p.hp -= BULLET_DAMAGE;
-          if (p.hp <= 0) {
-            p.hp = PLAYER_MAX_HP;
-            p.score++;
-            Object.assign(p, randomPos());
-          }
+          
+if (p.hp <= 0) {
+  room.roundWins[b.ownerId]++;
+
+  io.to(room.code).emit("roundResult", {
+    winnerId: b.ownerId,
+    type: "kill"
+  });
+
+  room.round++;
+  if (room.round > 5) {
+    io.to(room.code).emit("matchEnd", { wins: room.roundWins });
+    room.status = "lobby";
+    return;
+  }
+
+  room.roundTimer = 90;
+  room.bullets = [];
+
+  for (const pl of Object.values(room.players)) {
+    const spawn = randomPos();
+    pl.x = spawn.x;
+    pl.y = spawn.y;
+    pl.hp = PLAYER_MAX_HP;
+  }
+
+  io.to(room.code).emit("roundStart", { round: room.round, time: room.roundTimer });
+}
+
           hit = true;
           break;
         }
@@ -310,6 +343,40 @@ setInterval(() => {
       if (!hit) alive.push(b);
     }
     room.bullets = alive;
+
+    if (room.roundTimer !== undefined) {
+      room.roundTimer -= DT;
+      if (room.roundTimer <= 0) {
+        const alive = Object.values(room.players).filter(p => p.hp > 0);
+        let winnerId = null;
+
+        if (alive.length === 1) winnerId = alive[0].id;
+
+        if (winnerId) room.roundWins[winnerId]++;
+
+        io.to(room.code).emit("roundResult", {
+          winnerId,
+          type: "timeout"
+        });
+
+        room.round++;
+        if (room.round > 5) {
+          io.to(room.code).emit("matchEnd", { wins: room.roundWins });
+          room.status = "lobby";
+        } else {
+          room.roundTimer = 90;
+          room.bullets = [];
+          for (const p of Object.values(room.players)) {
+            const spawn = randomPos();
+            p.x = spawn.x;
+            p.y = spawn.y;
+            p.hp = PLAYER_MAX_HP;
+          }
+          io.to(room.code).emit("roundStart", { round: room.round, time: room.roundTimer });
+        }
+      }
+    }
+
 
     io.to(room.code).emit("gameState", {
       players: Object.values(room.players),
