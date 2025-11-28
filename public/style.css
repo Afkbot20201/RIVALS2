@@ -590,3 +590,17 @@ body,html {
   flex:1;
   justify-content:center;
 }
+
+
+/* White Logout Pill */
+.pill-white {
+  border-color: rgba(255,255,255,0.6);
+  color: white;
+  background: rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pill-white:hover {
+  background: rgba(255,255,255,0.15);
+}

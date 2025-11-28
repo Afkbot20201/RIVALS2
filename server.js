@@ -1,4 +1,3 @@
-
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -97,6 +96,7 @@ function removePlayer(socketId) {
 // ===== Socket.IO =====
 io.on("connection", socket => {
 
+  // --- Mongo Auth ---
   socket.on("register", async ({ username, password }, cb) => {
     try {
       if (!username || !password) return cb({ ok:false, error:"Missing fields" });
@@ -134,6 +134,7 @@ io.on("connection", socket => {
     }
   });
 
+
   socket.on("tokenLogin", async ({ token }, cb) => {
     try {
       if (!token) return cb({ ok:false });
@@ -147,6 +148,7 @@ io.on("connection", socket => {
       cb({ ok:false });
     }
   });
+
 
   console.log("Client connected", socket.id);
 
