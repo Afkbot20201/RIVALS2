@@ -16,6 +16,7 @@
       <span class="logo-text">Rivals 2</span>
     </div>
     <div class="top-right">
+      <button id="logoutBtn" class="pill pill-white">Logout</button>
       <span class="pill pill-online"><span class="dot"></span>Connected</span>
       <button class="pill pill-ghost" onclick="window.open('https://github.com','_blank')">
         View on GitHub
@@ -59,27 +60,68 @@
         <div class="lobby-main">
           
 <div id="auth-panel" style="margin-bottom:14px;">
-  <div class="player-name-row">
-    <label>Username</label>
-    <div class="input-wrapper">
-      <input id="authUser" placeholder="Username" />
-    </div>
+
+  <div class="auth-tabs">
+    <button id="tabLogin" class="auth-tab active">Login</button>
+    <button id="tabRegister" class="auth-tab">Register</button>
   </div>
 
-  <div class="player-name-row">
-    <label>Password</label>
-    <div class="input-wrapper">
-      <input id="authPass" type="password" placeholder="Password" />
+  <div class="auth-fields">
+    <div class="player-name-row">
+      <label>Username</label>
+      <div class="input-wrapper">
+        <input id="authUser" placeholder="Username" />
+      </div>
+    </div>
+
+    <div class="player-name-row">
+      <label>Password</label>
+      <div class="input-wrapper">
+        <input id="authPass" type="password" placeholder="Password" />
+      </div>
+    </div>
+
+    <div class="player-name-row confirm-row hidden">
+      <label>Confirm Password</label>
+      <div class="input-wrapper">
+        <input id="authConfirm" type="password" placeholder="Confirm Password" />
+      </div>
     </div>
   </div>
 
   <div style="display:flex; gap:8px; margin-top:8px;">
     <button id="loginBtn" class="btn join-btn">Login</button>
-    <button id="registerBtn" class="btn join-btn">Register</button>
+    <button id="registerBtn" class="btn join-btn hidden">Register</button>
   </div>
 
   <div id="authError" class="alert hidden"></div>
 </div>
+
+<script>
+  const tabLogin = document.getElementById("tabLogin");
+  const tabRegister = document.getElementById("tabRegister");
+  const confirmRow = document.querySelector(".confirm-row");
+  const loginBtn = document.getElementById("loginBtn");
+  const registerBtn = document.getElementById("registerBtn");
+
+  tabLogin.onclick = () => {
+    tabLogin.classList.add("active");
+    tabRegister.classList.remove("active");
+    confirmRow.classList.remove("show");
+    confirmRow.classList.add("hidden");
+    loginBtn.classList.remove("hidden");
+    registerBtn.classList.add("hidden");
+  };
+
+  tabRegister.onclick = () => {
+    tabRegister.classList.add("active");
+    tabLogin.classList.remove("active");
+    confirmRow.classList.remove("hidden");
+    confirmRow.classList.add("show");
+    registerBtn.classList.remove("hidden");
+    loginBtn.classList.add("hidden");
+  };
+</script>
 
 <div class="player-name-row">
             <label>Player name</label>
@@ -106,7 +148,7 @@
 
           <div class="players-card">
             <div class="players-header">
-              <span>Players in room (Ranked)</span>
+              <span>Players in room</span>
               <button id="startGameBtn" class="btn start-btn" disabled>Start Game</button>
             </div>
             <ul id="playersList"></ul>

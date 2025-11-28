@@ -21,6 +21,15 @@ const UserSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", UserSchema);
 
+function getRank(elo) {
+  if (elo < 800) return "Bronze";
+  if (elo < 1100) return "Silver";
+  if (elo < 1400) return "Gold";
+  if (elo < 1700) return "Platinum";
+  if (elo < 2000) return "Diamond";
+  return "Nemesis";
+}
+
 // ===== Server =====
 const app = express();
 const server = http.createServer(app);
@@ -40,17 +49,6 @@ const BULLET_SPEED = 520;
 const PLAYER_RADIUS = 18;
 const BULLET_RADIUS = 5;
 const PLAYER_MAX_HP = 100;
-
-
-function getRankFromElo(elo) {
-  if (elo < 900) return "Bronze";
-  if (elo < 1100) return "Silver";
-  if (elo < 1400) return "Gold";
-  if (elo < 1700) return "Platinum";
-  if (elo < 2000) return "Diamond";
-  return "Nemesis";
-}
-
 const BULLET_DAMAGE = 25;
 
 function randomPos() {
@@ -140,7 +138,7 @@ io.on("connection", socket => {
       await user.save();
 
       socket.username = username;
-      cb({ ok:true, username, token, elo: user.elo, rank: user.rank });
+      cb({ ok:true, username, token });
     } catch (err) {
       console.error(err);
       cb({ ok:false, error:"Server error" });
@@ -154,7 +152,7 @@ io.on("connection", socket => {
       const user = await User.findOne({ token });
       if (!user) return cb({ ok:false });
       socket.username = user.username;
-      cb({ ok:true, username: user.username, elo: user.elo, rank: user.rank });
+      cb({ ok:true, username: user.username });
     } catch {
       cb({ ok:false });
     }
@@ -163,7 +161,7 @@ io.on("connection", socket => {
 
   console.log("Client connected", socket.id);
 
-  socket.on("createRoom", ({ name }, cb) => {
+  socket.on("createRoom", async ({ name }, cb) => {
     if (!socket.username) return cb({ ok:false, error:"Not logged in" });
     const room = createRoom();
     const spawn = randomPos();
@@ -177,6 +175,26 @@ io.on("connection", socket => {
       score: 0,
       input: { up:false, down:false, left:false, right:false }
     };
+    // attach elo + rank from DB
+    try {
+      const u = await User.findOne({ username: socket.username });
+      if (u) {
+        player.elo = u.elo ?? 1000;
+        player.rank = u.rank ?? getRank(player.elo);
+      }
+    } catch (e) {
+      console.error("ELO lookup error (joinRoom):", e);
+    }
+    // attach elo + rank from DB
+    try {
+      const u = await User.findOne({ username: socket.username });
+      if (u) {
+        player.elo = u.elo ?? 1000;
+        player.rank = u.rank ?? getRank(player.elo);
+      }
+    } catch (e) {
+      console.error("ELO lookup error (createRoom):", e);
+    }
     room.players[socket.id] = player;
     room.hostId = socket.id;
     socket.join(room.code);
@@ -195,7 +213,7 @@ io.on("connection", socket => {
     });
   });
 
-  socket.on("joinRoom", ({ roomCode }, cb) => {
+  socket.on("joinRoom", async ({ roomCode }, cb) => {
     if (!socket.username) return cb({ ok:false, error:"Not logged in" });
 
     const code = (roomCode || "").trim().toUpperCase();
@@ -214,6 +232,26 @@ io.on("connection", socket => {
       score: 0,
       input: { up:false, down:false, left:false, right:false }
     };
+    // attach elo + rank from DB
+    try {
+      const u = await User.findOne({ username: socket.username });
+      if (u) {
+        player.elo = u.elo ?? 1000;
+        player.rank = u.rank ?? getRank(player.elo);
+      }
+    } catch (e) {
+      console.error("ELO lookup error (joinRoom):", e);
+    }
+    // attach elo + rank from DB
+    try {
+      const u = await User.findOne({ username: socket.username });
+      if (u) {
+        player.elo = u.elo ?? 1000;
+        player.rank = u.rank ?? getRank(player.elo);
+      }
+    } catch (e) {
+      console.error("ELO lookup error (createRoom):", e);
+    }
 
     room.players[socket.id] = player;
     socket.join(code);
@@ -314,6 +352,33 @@ setInterval(() => {
             p.hp = PLAYER_MAX_HP;
             p.score++;
             Object.assign(p, randomPos());
+
+            const killer = room.players[b.ownerId];
+            if (killer) {
+              (async () => {
+                try {
+                  const [victimUser, killerUser] = await Promise.all([
+                    User.findOne({ username: p.name }),
+                    User.findOne({ username: killer.name })
+                  ]);
+                  if (victimUser && killerUser) {
+                    victimUser.elo = Math.max(0, (victimUser.elo ?? 1000) - 10);
+                    killerUser.elo = (killerUser.elo ?? 1000) + 10;
+                    victimUser.rank = getRank(victimUser.elo);
+                    killerUser.rank = getRank(killerUser.elo);
+                    await victimUser.save();
+                    await killerUser.save();
+
+                    p.elo = victimUser.elo;
+                    p.rank = victimUser.rank;
+                    killer.elo = killerUser.elo;
+                    killer.rank = killerUser.rank;
+                  }
+                } catch (err) {
+                  console.error("ELO update error:", err);
+                }
+              })();
+            }
           }
           hit = true;
           break;

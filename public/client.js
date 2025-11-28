@@ -2,11 +2,14 @@
 (() => {
   const socket = io();
 
+  // ===== Persistent Login =====
   const savedToken = localStorage.getItem("authToken");
   if (savedToken) {
     socket.emit("tokenLogin", { token: savedToken }, res => {
       if (res.ok) {
         currentUsername = res.username;
+        playerNameInput.value = res.username;
+        playerNameInput.disabled = true;
         const authPanel = document.getElementById("auth-panel");
         if (authPanel) authPanel.style.display = "none";
       } else {
@@ -85,6 +88,7 @@
         return;
       }
       setAuthError("");
+      localStorage.setItem("authToken", res.token);
       currentUsername = res.username;
       playerNameInput.value = res.username;
       playerNameInput.disabled = true;
@@ -93,7 +97,14 @@
     });
   });
 
+  const authConfirm = document.getElementById("authConfirm");
+
   registerBtn.addEventListener("click", () => {
+    if (!authConfirm || authPass.value !== authConfirm.value) {
+      setAuthError("Passwords do not match");
+      return;
+    }
+
     socket.emit("register", {
       username: authUser.value.trim(),
       password: authPass.value
@@ -242,6 +253,11 @@
       const right = document.createElement("div");
       right.style.display = "flex";
       right.style.gap = "8px";
+      const rank = document.createElement("span");
+      rank.textContent = p.rank || "Bronze";
+      rank.className = "rank-pill rank-" + (p.rank || "Bronze");
+      right.appendChild(rank);
+
       const score = document.createElement("span");
       score.textContent = p.score ?? 0;
       score.style.fontSize = "12px";
@@ -496,7 +512,7 @@
 })();
 
 
-// Logout
+// ===== Logout =====
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
