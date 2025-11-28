@@ -14,6 +14,8 @@ const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
   token: String,
+  elo: { type: Number, default: 1000 },
+  rank: { type: String, default: "Bronze" },
   created: { type: Date, default: Date.now }
 });
 
@@ -38,6 +40,17 @@ const BULLET_SPEED = 520;
 const PLAYER_RADIUS = 18;
 const BULLET_RADIUS = 5;
 const PLAYER_MAX_HP = 100;
+
+
+function getRankFromElo(elo) {
+  if (elo < 900) return "Bronze";
+  if (elo < 1100) return "Silver";
+  if (elo < 1400) return "Gold";
+  if (elo < 1700) return "Platinum";
+  if (elo < 2000) return "Diamond";
+  return "Nemesis";
+}
+
 const BULLET_DAMAGE = 25;
 
 function randomPos() {
@@ -127,7 +140,7 @@ io.on("connection", socket => {
       await user.save();
 
       socket.username = username;
-      cb({ ok:true, username, token });
+      cb({ ok:true, username, token, elo: user.elo, rank: user.rank });
     } catch (err) {
       console.error(err);
       cb({ ok:false, error:"Server error" });
@@ -141,7 +154,7 @@ io.on("connection", socket => {
       const user = await User.findOne({ token });
       if (!user) return cb({ ok:false });
       socket.username = user.username;
-      cb({ ok:true, username: user.username });
+      cb({ ok:true, username: user.username, elo: user.elo, rank: user.rank });
     } catch {
       cb({ ok:false });
     }

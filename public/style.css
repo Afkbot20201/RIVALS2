@@ -592,55 +592,9 @@ body,html {
 }
 
 
-/* Auth Tabs */
-.auth-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.auth-tab {
-  flex: 1;
-  padding: 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(148,163,184,0.4);
-  background: rgba(15,23,42,0.9);
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 12px;
-  text-transform: uppercase;
-  transition: all 0.25s ease;
-}
-
-.auth-tab.active {
-  background: linear-gradient(90deg,#38bdf8,#a855f7);
-  color: #020617;
-  border-color: transparent;
-}
-
-/* Smooth confirm password animation */
-.confirm-row {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transform: translateY(-6px);
-  transition: all 0.25s ease;
-}
-
-.confirm-row.show {
-  max-height: 80px;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* White Logout Pill */
-.pill-white {
-  border-color: rgba(255,255,255,0.6);
-  color: white;
-  background: rgba(255,255,255,0.06);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.pill-white:hover {
-  background: rgba(255,255,255,0.15);
-}
+.rank-Bronze { color: #cd7f32; }
+.rank-Silver { color: #c0c0c0; }
+.rank-Gold { color: #ffd700; }
+.rank-Platinum { color: #67e8f9; }
+.rank-Diamond { color: #93c5fd; }
+.rank-Nemesis { color: #f43f5e; }
