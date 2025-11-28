@@ -15,6 +15,7 @@ const users = {};
 const sessions = {};
 
 io.on("connection", socket => {
+  console.log("Client connected");
 
   socket.on("register", async (data, cb) => {
     try {
@@ -54,7 +55,6 @@ io.on("connection", socket => {
     socket.username = username;
     cb({ ok: true, username });
   });
-
 });
 
 const PORT = process.env.PORT || 3000;

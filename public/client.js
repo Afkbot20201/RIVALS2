@@ -7,7 +7,6 @@ const regUser = document.getElementById("regUser");
 const regPass = document.getElementById("regPass");
 const regPass2 = document.getElementById("regPass2");
 const rememberMe = document.getElementById("rememberMe");
-
 const loginBtn = document.getElementById("loginBtn");
 const registerBtn = document.getElementById("registerBtn");
 const authError = document.getElementById("authError");
@@ -36,16 +35,13 @@ function setAuthError(msg) {
 const savedToken = localStorage.getItem("sessionToken");
 if (savedToken) {
   socket.emit("resumeSession", savedToken, res => {
-    if (res.ok) afterLogin(res.username);
-    else localStorage.removeItem("sessionToken");
+    if (res.ok) {
+      playerNameInput.value = res.username;
+      playerNameInput.disabled = true;
+      document.getElementById("auth-panel").style.display = "none";
+      logoutBtn.classList.remove("hidden");
+    } else localStorage.removeItem("sessionToken");
   });
-}
-
-function afterLogin(username) {
-  playerNameInput.value = username;
-  playerNameInput.disabled = true;
-  document.getElementById("auth-panel").style.display = "none";
-  logoutBtn.classList.remove("hidden");
 }
 
 loginBtn.addEventListener("click", () => {
@@ -54,17 +50,16 @@ loginBtn.addEventListener("click", () => {
     password: loginPass.value
   }, res => {
     if (!res.ok) return setAuthError(res.error);
-
-    if (rememberMe.checked) {
-      localStorage.setItem("sessionToken", res.token);
-    }
-    afterLogin(res.username);
+    if (rememberMe.checked) localStorage.setItem("sessionToken", res.token);
+    playerNameInput.value = res.username;
+    playerNameInput.disabled = true;
+    document.getElementById("auth-panel").style.display = "none";
+    logoutBtn.classList.remove("hidden");
   });
 });
 
 registerBtn.addEventListener("click", () => {
   if (regPass.value !== regPass2.value) return setAuthError("Passwords do not match");
-
   socket.emit("register", {
     username: regUser.value,
     password: regPass.value

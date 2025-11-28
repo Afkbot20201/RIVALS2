@@ -10,40 +10,47 @@
 <body>
 <div id="app">
   <header class="top-bar">
-    <div class="logo">⚡ Rivals 2</div>
+    <div class="logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Rivals 2</span>
+    </div>
     <div class="top-right">
       <button id="logoutBtn" class="pill pill-ghost hidden">Log Out</button>
+      <span class="pill pill-online"><span class="dot"></span>Connected</span>
     </div>
   </header>
 
   <main class="main">
-    <section id="lobby-panel" class="card">
+    <section id="lobby-panel" class="card card-lobby">
+      <div class="card-body lobby-layout">
+        <div class="lobby-main">
 
-      <div id="auth-panel" class="auth-card">
-        <div class="auth-tabs">
-          <button class="auth-tab active" data-tab="login">Login</button>
-          <button class="auth-tab" data-tab="register">Register</button>
+<div id="auth-panel" class="auth-card">
+  <div class="auth-tabs">
+    <button class="auth-tab active" data-tab="login">Login</button>
+    <button class="auth-tab" data-tab="register">Register</button>
+  </div>
+
+  <div id="loginTab" class="auth-tab-content active">
+    <input id="loginUser" placeholder="Username" />
+    <input id="loginPass" type="password" placeholder="Password" />
+    <label><input type="checkbox" id="rememberMe"> Remember me</label>
+    <button id="loginBtn" class="btn full">Login</button>
+  </div>
+
+  <div id="registerTab" class="auth-tab-content">
+    <input id="regUser" placeholder="Username" />
+    <input id="regPass" type="password" placeholder="Password" />
+    <input id="regPass2" type="password" placeholder="Confirm Password" />
+    <button id="registerBtn" class="btn full">Register</button>
+  </div>
+  <div id="authError" class="alert hidden"></div>
+</div>
+
+<input id="playerName" placeholder="Player name" />
+
         </div>
-
-        <div id="loginTab" class="auth-tab-content active">
-          <input id="loginUser" placeholder="Username" />
-          <input id="loginPass" type="password" placeholder="Password" />
-          <label><input type="checkbox" id="rememberMe"> Remember me</label>
-          <button id="loginBtn">Login</button>
-        </div>
-
-        <div id="registerTab" class="auth-tab-content">
-          <input id="regUser" placeholder="Username" />
-          <input id="regPass" type="password" placeholder="Password" />
-          <input id="regPass2" type="password" placeholder="Confirm Password" />
-          <button id="registerBtn">Register</button>
-        </div>
-
-        <div id="authError" class="alert hidden"></div>
       </div>
-
-      <input id="playerName" placeholder="Player Name" />
-
     </section>
   </main>
 </div>
