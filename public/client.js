@@ -482,41 +482,42 @@
   draw();
 })();
 
-// ===== ROUND UI =====
-const roundOverlay = document.getElementById("roundOverlay");
-const roundTimerEl = document.getElementById("roundTimer");
 
 let currentRound = 1;
 let roundTime = 90;
 
+let gameOverlay = document.getElementById("gameOverlay");
+let roundTimerEl = document.getElementById("roundTimer");
+
 socket.on("roundStart", data => {
   currentRound = data.round;
   roundTime = data.time;
-  roundOverlay.textContent = "ROUND " + currentRound;
-  roundOverlay.classList.add("show");
-  setTimeout(() => roundOverlay.classList.remove("show"), 1200);
+
+  gameOverlay.textContent = "ROUND " + currentRound;
+  gameOverlay.classList.remove("hidden");
+  setTimeout(() => gameOverlay.classList.add("hidden"), 1200);
 });
 
 socket.on("roundResult", data => {
   if (data.winnerId === currentPlayerId) {
-    roundOverlay.textContent = "ROUND WON";
+    gameOverlay.textContent = "ROUND WON";
   } else if (!data.winnerId) {
-    roundOverlay.textContent = "DRAW";
+    gameOverlay.textContent = "DRAW";
   } else {
-    roundOverlay.textContent = "ROUND LOST";
+    gameOverlay.textContent = "ROUND LOST";
   }
-  roundOverlay.classList.add("show");
-  setTimeout(() => roundOverlay.classList.remove("show"), 1500);
+  gameOverlay.classList.remove("hidden");
+  setTimeout(() => gameOverlay.classList.add("hidden"), 1500);
 });
 
 socket.on("matchEnd", () => {
-  roundOverlay.textContent = "MATCH FINISHED";
-  roundOverlay.classList.add("show");
+  gameOverlay.textContent = "MATCH FINISHED";
+  gameOverlay.classList.remove("hidden");
 });
 
 setInterval(() => {
   if (roundTime > 0) {
-    roundTime -= 1;
-    roundTimerEl.textContent = "TIME: " + roundTime;
+    roundTime--;
+    if (roundTimerEl) roundTimerEl.textContent = roundTime + "s";
   }
 }, 1000);

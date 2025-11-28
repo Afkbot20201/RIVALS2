@@ -134,7 +134,7 @@ io.on("connection", socket => {
   socket.on("createRoom", ({ name }, cb) => {
     if (!socket.username) return cb({ ok:false, error:"Not logged in" });
     const room = createRoom();
-    const spawn = idx === 0 ? { x: 300, y: 80 } : { x: 300, y: 520 };
+    const spawn = randomPos();
     const player = {
       id: socket.id,
       name: socket.username,
@@ -171,7 +171,7 @@ io.on("connection", socket => {
     if (!room) return cb({ ok:false, error:"Room not found" });
     if (room.status !== "lobby") return cb({ ok:false, error:"Game already started" });
 
-    const spawn = idx === 0 ? { x: 300, y: 80 } : { x: 300, y: 520 };
+    const spawn = randomPos();
     const player = {
       id: socket.id,
       name: socket.username,
@@ -205,21 +205,11 @@ io.on("connection", socket => {
     if (!room || room.hostId !== socket.id) return;
 
     room.status = "running";
-
-room.round = 1;
-room.roundWins = {};
-room.roundTimer = 90;
-
-const ids = Object.keys(room.players);
-ids.forEach(id => room.roundWins[id] = 0);
-
-io.to(roomCode).emit("roundStart", { round: room.round, time: room.roundTimer });
-
     room.bullets = [];
     room.lastBulletId = 0;
 
     for (const p of Object.values(room.players)) {
-      const spawn = idx === 0 ? { x: 300, y: 80 } : { x: 300, y: 520 };
+      const spawn = randomPos();
       p.x = spawn.x;
       p.y = spawn.y;
       p.hp = PLAYER_MAX_HP;
@@ -288,7 +278,7 @@ setInterval(() => {
         const dy = p.y - b.y;
         if (dx*dx + dy*dy <= (PLAYER_RADIUS+BULLET_RADIUS)**2) {
           p.hp -= BULLET_DAMAGE;
-          if (room.status === "running" && p.hp <= 0) {
+          if (p.hp <= 0) {
             p.hp = PLAYER_MAX_HP;
             p.score++;
             Object.assign(p, randomPos());
@@ -313,3 +303,10 @@ setInterval(() => {
 server.listen(PORT, () => {
   console.log("Rivals 2 server listening on", PORT);
 });
+
+
+// === FIXED SPAWN POSITIONS FOR ROUNDS ===
+const FIXED_SPAWNS = [
+  { x: 400, y: 100 },
+  { x: 400, y: 500 }
+];
