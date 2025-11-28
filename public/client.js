@@ -539,3 +539,21 @@ socket.on("roundState", data => {
 socket.on("matchEnd", data => {
   alert("Match Winner: " + data.winnerId);
 });
+
+socket.off("roundState");
+socket.on("roundState", data => {
+  if (roundLabel) roundLabel.textContent = data.round ?? 1;
+  if (timerLabel) timerLabel.textContent = data.timeLeft ?? 0;
+
+  if (winsLabel && data.wins) {
+    const vals = Object.values(data.wins);
+    winsLabel.textContent =
+      vals.length === 2 ? `${vals[0]}-${vals[1]}` : vals.join(" / ");
+  }
+});
+
+socket.off("matchEnd");
+socket.on("matchEnd", data => {
+  alert("Match Winner: " + data.winnerId);
+});
+
