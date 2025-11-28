@@ -121,7 +121,6 @@
       if (authPanel) authPanel.classList.add("hidden");
     });
   });
-  });
 
   registerBtn.addEventListener("click", () => {
     const username = (regUser?.value || "").trim();
@@ -148,7 +147,6 @@
       if (loginTab) loginTab.click();
       if (authUser) authUser.value = username;
     });
-  });
   });
 
   function setLobbyError(msg) {
