@@ -2,17 +2,14 @@
 (() => {
   const socket = io();
 
-  // Remember last username
-  const lastUser = localStorage.getItem("lastUsername");
-  if (lastUser) authUser.value = lastUser;
-
-  // Persistent login
+  // Persistent Login
   const savedToken = localStorage.getItem("authToken");
   if (savedToken) {
     socket.emit("tokenLogin", { token: savedToken }, res => {
       if (res.ok) {
         currentUsername = res.username;
-        document.getElementById("headerUser").textContent = res.username;
+        playerNameInput.value = res.username;
+        playerNameInput.disabled = true;
         const authPanel = document.getElementById("auth-panel");
         if (authPanel) authPanel.style.display = "none";
       } else {
@@ -92,9 +89,9 @@
       }
       setAuthError("");
       localStorage.setItem("authToken", res.token);
-      localStorage.setItem("lastUsername", res.username);
       currentUsername = res.username;
-      document.getElementById("headerUser").textContent = res.username;
+      playerNameInput.value = res.username;
+      playerNameInput.disabled = true;
       const authPanel = document.getElementById("auth-panel");
       if (authPanel) authPanel.style.display = "none";
     });
@@ -503,34 +500,12 @@
 })();
 
 
-// ===== Password Toggles =====
-document.querySelectorAll(".pw-toggle").forEach(t => {
-  t.addEventListener("click", () => {
-    const input = document.getElementById(t.dataset.target);
-    input.type = input.type === "password" ? "text" : "password";
-  });
-});
-
-// ===== Strength Meter =====
-const strengthFill = document.getElementById("pwStrengthFill");
-authPass.addEventListener("input", () => {
-  const v = authPass.value;
-  let score = 0;
-  if (v.length > 5) score += 30;
-  if (/[A-Z]/.test(v)) score += 20;
-  if (/[0-9]/.test(v)) score += 20;
-  if (/[^A-Za-z0-9]/.test(v)) score += 30;
-  strengthFill.style.width = Math.min(score,100) + "%";
-});
-
-// ===== Confirm Match Check =====
+// ===== Confirm Password Validation =====
 const authConfirm = document.getElementById("authConfirm");
-const confirmCheck = document.getElementById("confirmCheck");
-authConfirm.addEventListener("input", () => {
-  if (authPass.value && authPass.value === authConfirm.value) {
-    confirmCheck.classList.remove("hidden");
-  } else {
-    confirmCheck.classList.add("hidden");
+registerBtn.addEventListener("click", () => {
+  if (authPass.value !== authConfirm.value) {
+    setAuthError("Passwords do not match");
+    return;
   }
 });
 

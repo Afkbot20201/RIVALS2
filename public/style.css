@@ -592,23 +592,6 @@ body,html {
 }
 
 
-/* Header username pill */
-.pill-user {
-  border-color: rgba(168,85,247,0.6);
-  color: #f5d0fe;
-  background: rgba(168,85,247,0.08);
-}
-
-/* White Logout Pill */
-.pill-white {
-  border-color: rgba(255,255,255,0.6);
-  color: white;
-  background: rgba(255,255,255,0.06);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.pill-white:hover { background: rgba(255,255,255,0.15); }
-
 /* Auth Tabs */
 .auth-tabs { display:flex; gap:8px; margin-bottom:10px; }
 .auth-tab {
@@ -623,31 +606,6 @@ body,html {
   color:#020617; border-color:transparent;
 }
 
-/* Password toggle */
-.pw-wrapper { position:relative; }
-.pw-toggle {
-  position:absolute; right:10px; cursor:pointer;
-  opacity:.7; user-select:none;
-}
-.pw-toggle:hover { opacity:1; }
-
-/* Confirm check */
-.confirm-check {
-  position:absolute; right:34px; color:#22c55e;
-  font-size:14px;
-}
-
-/* Strength meter */
-.pw-strength {
-  height:6px; border-radius:999px;
-  background:rgba(30,64,175,0.6); margin-top:6px;
-}
-.pw-strength-fill {
-  height:100%; width:0%; border-radius:999px;
-  background:linear-gradient(90deg,#f97316,#22c55e);
-  transition:width .25s ease;
-}
-
 /* Confirm row animation */
 .confirm-row {
   max-height:0; opacity:0; overflow:hidden;
@@ -656,3 +614,13 @@ body,html {
 .confirm-row.show {
   max-height:80px; opacity:1; transform:translateY(0);
 }
+
+/* White Logout Pill */
+.pill-white {
+  border-color: rgba(255,255,255,0.6);
+  color: white;
+  background: rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pill-white:hover { background: rgba(255,255,255,0.15); }
