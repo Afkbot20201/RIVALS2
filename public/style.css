@@ -38,7 +38,8 @@ body,html {
              #020617;
   border:1px solid rgba(148,163,184,0.25);
   box-shadow:var(--shadow-soft);
-}
+
+  position:relative;}
 
 .top-bar {
   display:flex;
@@ -564,66 +565,95 @@ body,html {
   .tasks-panel { order:2; }
 }
 
-/* Auth tabs + panel */
-.auth-card {
-  padding:18px 20px 20px;
-  border-radius:var(--radius-md);
-  background:var(--bg-card);
-  border:1px solid rgba(148,163,184,0.5);
-  box-shadow:var(--shadow-soft);
+
+/* Auth overlay */
+#auth-panel {
+  position:absolute;
+  inset:0;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  justify-content:center;
+  align-items:center;
+  background:rgba(15,23,42,0.96);
+  z-index:20;
+}
+
+#auth-panel .player-name-row {
+  width:260px;
+}
+
+#auth-panel .input-wrapper {
+  width:100%;
+}
+
+#auth-panel .btn {
+  flex:1;
+  justify-content:center;
+}
+
+/* Auth card + tabs inside overlay */
+.auth-card {
+  width: 320px;
+  max-width: 90vw;
+  padding: 18px 18px 20px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid rgba(148,163,184,0.6);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .auth-tabs {
-  display:flex;
-  gap:6px;
-  margin-bottom:8px;
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .auth-tab {
-  flex:1;
-  border:none;
-  border-radius:999px;
-  padding:6px 10px;
-  font-size:11px;
-  letter-spacing:0.14em;
-  text-transform:uppercase;
-  cursor:pointer;
-  background:rgba(15,23,42,0.9);
-  color:var(--text-muted);
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: rgba(15,23,42,0.9);
+  color: var(--text-muted);
 }
 
 .auth-tab.active {
-  background:linear-gradient(90deg,var(--accent),var(--accent-2));
-  color:#020617;
-  box-shadow:0 0 18px rgba(56,189,248,0.7);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: #020617;
+  box-shadow: 0 0 18px rgba(56,189,248,0.7);
 }
 
-.auth-content { display:none; }
-.auth-content.active { display:block; }
+.auth-content { display: none; }
+.auth-content.active { display: block; }
 
 .remember-row {
-  display:flex;
-  align-items:center;
-  gap:6px;
-  margin:8px 0 4px;
-  font-size:11px;
-  color:var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 4px;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .remember-row input[type="checkbox"] {
-  width:14px;
-  height:14px;
+  width: 14px;
+  height: 14px;
 }
 
 #auth-panel .auth-actions {
-  display:flex;
-  gap:8px;
-  margin-top:8px;
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
 }
 
-#auth-panel .btn.play-btn {
-  width:100%;
+#auth-panel .auth-actions .btn {
+  width: 100%;
+  justify-content: center;
 }

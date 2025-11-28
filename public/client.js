@@ -2,124 +2,23 @@
 (() => {
   const socket = io();
 
-  
-  // Auth elements
-  const authPanel = document.getElementById("auth-panel");
-  const authTabs = document.querySelectorAll(".auth-tab");
-  const authViews = document.querySelectorAll(".auth-content");
-  const loginUserInput = document.getElementById("authUser");
-  const loginPassInput = document.getElementById("authPass");
-  const regUserInput = document.getElementById("regUser");
-  const regPassInput = document.getElementById("regPass");
-  const regConfirmInput = document.getElementById("regConfirm");
-  const rememberMeCheckbox = document.getElementById("rememberMe");
+
+  const authUser = document.getElementById("authUser");
+  const authPass = document.getElementById("authPass");
   const loginBtn = document.getElementById("loginBtn");
   const registerBtn = document.getElementById("registerBtn");
-  const authErrorEl = document.getElementById("authError");
+  const authError = document.getElementById("authError");
 
-  function setAuthError(msg) {
-    if (!authErrorEl) return;
-    if (!msg) {
-      authErrorEl.classList.add("hidden");
-      authErrorEl.textContent = "";
-    } else {
-      authErrorEl.classList.remove("hidden");
-      authErrorEl.textContent = msg;
-    }
-  }
+  const regUser = document.getElementById("regUser");
+  const regPass = document.getElementById("regPass");
+  const regConfirm = document.getElementById("regConfirm");
+  const rememberMe = document.getElementById("rememberMe");
+  const authPanel = document.getElementById("auth-panel");
+  const authTabs = document.querySelectorAll(".auth-tab");
+  const authContents = document.querySelectorAll(".auth-content");
 
-  function loadLocalUsers() {
-    try {
-      return JSON.parse(localStorage.getItem("rivals2_users")) || {};
-    } catch (e) {
-      return {};
-    }
-  }
 
-  function saveLocalUsers(users) {
-    localStorage.setItem("rivals2_users", JSON.stringify(users));
-  }
-
-  function completeLogin(username, remember) {
-    if (playerNameInput) {
-      playerNameInput.value = username;
-      playerNameInput.disabled = true;
-    }
-    if (authPanel) {
-      authPanel.classList.add("hidden");
-    }
-    if (remember) {
-      localStorage.setItem("rivals2_user", username);
-    } else {
-      localStorage.removeItem("rivals2_user");
-    }
-  }
-
-  if (authTabs && authTabs.length) {
-    authTabs.forEach(tab => {
-      tab.addEventListener("click", () => {
-        authTabs.forEach(t => t.classList.remove("active"));
-        authViews.forEach(v => v.classList.remove("active"));
-        tab.classList.add("active");
-        const targetId = tab.dataset.tab === "register" ? "auth-register" : "auth-login";
-        const target = document.getElementById(targetId);
-        if (target) target.classList.add("active");
-        setAuthError("");
-      });
-    });
-  }
-
-  const rememberedUser = localStorage.getItem("rivals2_user");
-  if (rememberedUser) {
-    completeLogin(rememberedUser, true);
-  }
-
-  if (loginBtn) {
-    loginBtn.addEventListener("click", () => {
-      const username = (loginUserInput?.value || "").trim();
-      const password = loginPassInput?.value || "";
-      if (!username || !password) {
-        setAuthError("Username and password required.");
-        return;
-      }
-      const users = loadLocalUsers();
-      const record = users[username];
-      if (!record || record.password !== password) {
-        setAuthError("Invalid username or password for this device.");
-        return;
-      }
-      setAuthError("");
-      completeLogin(username, !!rememberMeCheckbox?.checked);
-    });
-  }
-
-  if (registerBtn) {
-    registerBtn.addEventListener("click", () => {
-      const username = (regUserInput?.value || "").trim();
-      const password = regPassInput?.value || "";
-      const confirm = regConfirmInput?.value || "";
-      if (!username || !password) {
-        setAuthError("Username and password required.");
-        return;
-      }
-      if (password !== confirm) {
-        setAuthError("Passwords do not match.");
-        return;
-      }
-      const users = loadLocalUsers();
-      if (users[username]) {
-        setAuthError("Username already exists on this device.");
-        return;
-      }
-      users[username] = { password };
-      saveLocalUsers(users);
-      setAuthError("Registered! You can now log in.");
-      const loginTab = document.querySelector('.auth-tab[data-tab="login"]');
-      if (loginTab) loginTab.click();
-      if (loginUserInput) loginUserInput.value = username;
-    });
-  }
-const lobbyPanel = document.getElementById("lobby-panel");
+  const lobbyPanel = document.getElementById("lobby-panel");
   const gamePanel = document.getElementById("game-panel");
 
   const playerNameInput = document.getElementById("playerName");
@@ -148,6 +47,7 @@ const lobbyPanel = document.getElementById("lobby-panel");
   const ctx = gameCanvas.getContext("2d");
 
   let currentRoomCode = null;
+  let currentUsername = localStorage.getItem("rivals2_user") || null;
   let currentPlayerId = null;
   let isHost = false;
   let arena = { width: 1400, height: 800 };
@@ -158,6 +58,98 @@ const lobbyPanel = document.getElementById("lobby-panel");
   let mouseDown = false;
   let lastShootTime = 0;
   const SHOOT_COOLDOWN = 200;
+  // Auth tab switching
+  if (authTabs && authTabs.length) {
+    authTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        authTabs.forEach(t => t.classList.remove("active"));
+        authContents.forEach(c => c.classList.remove("active"));
+        tab.classList.add("active");
+        const targetId = tab.dataset.tab === "register" ? "auth-register" : "auth-login";
+        const target = document.getElementById(targetId);
+        if (target) target.classList.add("active");
+        setAuthError("");
+      });
+    });
+  }
+
+  // Apply remembered username if any
+  if (currentUsername && playerNameInput) {
+    playerNameInput.value = currentUsername;
+    playerNameInput.disabled = true;
+    if (authPanel) authPanel.classList.add("hidden");
+  }
+
+
+
+  function setAuthError(msg) {
+    if (!msg) {
+      authError.classList.add("hidden");
+      authError.textContent = "";
+    } else {
+      authError.classList.remove("hidden");
+      authError.textContent = msg;
+    }
+  }
+
+  loginBtn.addEventListener("click", () => {
+    const username = (authUser?.value || "").trim();
+    const password = authPass?.value || "";
+    if (!username || !password) {
+      setAuthError("Username and password required.");
+      return;
+    }
+    socket.emit("login", {
+      username,
+      password
+    }, res => {
+      if (!res.ok) {
+        setAuthError(res.error);
+        return;
+      }
+      setAuthError("");
+      currentUsername = res.username;
+      if (rememberMe && rememberMe.checked) {
+        localStorage.setItem("rivals2_user", currentUsername);
+      } else {
+        localStorage.removeItem("rivals2_user");
+      }
+      if (playerNameInput) {
+        playerNameInput.value = currentUsername;
+        playerNameInput.disabled = true;
+      }
+      if (authPanel) authPanel.classList.add("hidden");
+    });
+  });
+  });
+
+  registerBtn.addEventListener("click", () => {
+    const username = (regUser?.value || "").trim();
+    const password = regPass?.value || "";
+    const confirm = regConfirm?.value || "";
+    if (!username || !password) {
+      setAuthError("Username and password required.");
+      return;
+    }
+    if (password !== confirm) {
+      setAuthError("Passwords do not match.");
+      return;
+    }
+    socket.emit("register", {
+      username,
+      password
+    }, res => {
+      if (!res.ok) {
+        setAuthError(res.error);
+        return;
+      }
+      setAuthError("Registered! You can now log in.");
+      const loginTab = document.querySelector('.auth-tab[data-tab="login"]');
+      if (loginTab) loginTab.click();
+      if (authUser) authUser.value = username;
+    });
+  });
+  });
 
   function setLobbyError(msg) {
     if (!msg) {
@@ -310,6 +302,7 @@ const lobbyPanel = document.getElementById("lobby-panel");
   }
 
   function handleCreateRoom() {
+    if (!currentUsername) { setLobbyError("Please log in first."); return; }
     const name = playerNameInput.value.trim();
     if (!name) {
       setLobbyError("Please enter a player name.");
@@ -335,6 +328,7 @@ const lobbyPanel = document.getElementById("lobby-panel");
   }
 
   function handleJoinRoom() {
+    if (!currentUsername) { setLobbyError("Please log in first."); return; }
     const name = playerNameInput.value.trim();
     const code = roomCodeInput.value.trim().toUpperCase();
     if (!name) {
