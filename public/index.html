@@ -16,6 +16,7 @@
       <span class="logo-text">Rivals 2</span>
     </div>
     <div class="top-right">
+      <span id="headerUser" class="pill pill-user">Guest</span>
       <button id="logoutBtn" class="pill pill-white">Logout</button>
       <span class="pill pill-online"><span class="dot"></span>Connected</span>
       <button class="pill pill-ghost" onclick="window.open('https://github.com','_blank')">
@@ -59,6 +60,7 @@
 
         <div class="lobby-main">
           
+
 <div id="auth-panel" style="margin-bottom:14px;">
 
   <div class="auth-tabs">
@@ -75,15 +77,21 @@
 
   <div class="player-name-row">
     <label>Password</label>
-    <div class="input-wrapper">
+    <div class="input-wrapper pw-wrapper">
       <input id="authPass" type="password" placeholder="Password" />
+      <span class="pw-toggle" data-target="authPass">👁</span>
+    </div>
+    <div class="pw-strength">
+      <div id="pwStrengthFill" class="pw-strength-fill"></div>
     </div>
   </div>
 
-  <div class="player-name-row hidden" id="confirmRow">
+  <div class="player-name-row confirm-row hidden">
     <label>Confirm Password</label>
-    <div class="input-wrapper">
+    <div class="input-wrapper pw-wrapper">
       <input id="authConfirm" type="password" placeholder="Confirm Password" />
+      <span id="confirmCheck" class="confirm-check hidden">✔</span>
+      <span class="pw-toggle" data-target="authConfirm">👁</span>
     </div>
   </div>
 
@@ -95,35 +103,24 @@
   <div id="authError" class="alert hidden"></div>
 </div>
 
-<script>
-  const tabLogin = document.getElementById("tabLogin");
-  const tabRegister = document.getElementById("tabRegister");
-  const confirmRow = document.getElementById("confirmRow");
-  const loginBtn = document.getElementById("loginBtn");
-  const registerBtn = document.getElementById("registerBtn");
+  </div>
 
-  tabLogin.onclick = () => {
-    tabLogin.classList.add("active");
-    tabRegister.classList.remove("active");
-    confirmRow.classList.add("hidden");
-    loginBtn.classList.remove("hidden");
-    registerBtn.classList.add("hidden");
-  };
+  <div class="player-name-row">
+    <label>Password</label>
+    <div class="input-wrapper">
+      <input id="authPass" type="password" placeholder="Password" />
+    </div>
+  </div>
 
-  tabRegister.onclick = () => {
-    tabRegister.classList.add("active");
-    tabLogin.classList.remove("active");
-    confirmRow.classList.remove("hidden");
-    registerBtn.classList.remove("hidden");
-    loginBtn.classList.add("hidden");
-  };
-</script>
+  <div style="display:flex; gap:8px; margin-top:8px;">
+    <button id="loginBtn" class="btn join-btn">Login</button>
+    <button id="registerBtn" class="btn join-btn">Register</button>
+  </div>
 
-<div class="player-name-row">
-            <label>Player name</label>
-            <div class="input-wrapper">
-              <input id="playerName" maxlength="20" placeholder="Type your nickname" />
-            </div>
+  <div id="authError" class="alert hidden"></div>
+</div>
+
+
           </div>
 
           <div class="play-row">
