@@ -138,10 +138,8 @@ io.on("connection", socket => {
   socket.on("tokenLogin", async ({ token }, cb) => {
     try {
       if (!token) return cb({ ok:false });
-
       const user = await User.findOne({ token });
       if (!user) return cb({ ok:false });
-
       socket.username = user.username;
       cb({ ok:true, username: user.username });
     } catch {

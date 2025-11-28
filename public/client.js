@@ -498,6 +498,28 @@
   draw();
 })();
 
+// ===== Register Confirm Password =====
+const authConfirm = document.getElementById("authConfirm");
+
+registerBtn.addEventListener("click", () => {
+  if (authPass.value !== authConfirm.value) {
+    setAuthError("Passwords do not match");
+    return;
+  }
+
+  socket.emit("register", {
+    username: authUser.value.trim(),
+    password: authPass.value
+  }, res => {
+    if (!res.ok) {
+      setAuthError(res.error);
+      return;
+    }
+    setAuthError("Registered! You can now log in.");
+  });
+});
+
+// ===== Logout =====
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
   logoutBtn.addEventListener("click", () => {
