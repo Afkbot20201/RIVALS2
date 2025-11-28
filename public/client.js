@@ -2,6 +2,22 @@
 (() => {
   const socket = io();
 
+  // ===== Persistent Login =====
+  const savedToken = localStorage.getItem("authToken");
+  if (savedToken) {
+    socket.emit("tokenLogin", { token: savedToken }, res => {
+      if (res.ok) {
+        currentUsername = res.username;
+        playerNameInput.value = res.username;
+        playerNameInput.disabled = true;
+        const authPanel = document.getElementById("auth-panel");
+        if (authPanel) authPanel.style.display = "none";
+      } else {
+        localStorage.removeItem("authToken");
+      }
+    });
+  }
+
 
   const authUser = document.getElementById("authUser");
   const authPass = document.getElementById("authPass");
@@ -72,6 +88,7 @@
         return;
       }
       setAuthError("");
+      localStorage.setItem("authToken", res.token);
       currentUsername = res.username;
       playerNameInput.value = res.username;
       playerNameInput.disabled = true;
@@ -80,7 +97,14 @@
     });
   });
 
+  const authConfirm = document.getElementById("authConfirm");
+
   registerBtn.addEventListener("click", () => {
+    if (!authConfirm || authPass.value !== authConfirm.value) {
+      setAuthError("Passwords do not match");
+      return;
+    }
+
     socket.emit("register", {
       username: authUser.value.trim(),
       password: authPass.value
@@ -483,41 +507,11 @@
 })();
 
 
-let currentRound = 1;
-let roundTime = 90;
-
-let gameOverlay = document.getElementById("gameOverlay");
-let roundTimerEl = document.getElementById("roundTimer");
-
-socket.on("roundStart", data => {
-  currentRound = data.round;
-  roundTime = data.time;
-
-  gameOverlay.textContent = "ROUND " + currentRound;
-  gameOverlay.classList.remove("hidden");
-  setTimeout(() => gameOverlay.classList.add("hidden"), 1200);
-});
-
-socket.on("roundResult", data => {
-  if (data.winnerId === currentPlayerId) {
-    gameOverlay.textContent = "ROUND WON";
-  } else if (!data.winnerId) {
-    gameOverlay.textContent = "DRAW";
-  } else {
-    gameOverlay.textContent = "ROUND LOST";
-  }
-  gameOverlay.classList.remove("hidden");
-  setTimeout(() => gameOverlay.classList.add("hidden"), 1500);
-});
-
-socket.on("matchEnd", () => {
-  gameOverlay.textContent = "MATCH FINISHED";
-  gameOverlay.classList.remove("hidden");
-});
-
-setInterval(() => {
-  if (roundTime > 0) {
-    roundTime--;
-    if (roundTimerEl) roundTimerEl.textContent = roundTime + "s";
-  }
-}, 1000);
+// ===== Logout =====
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    localStorage.removeItem("authToken");
+    location.reload();
+  });
+}

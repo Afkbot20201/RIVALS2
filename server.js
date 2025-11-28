@@ -13,6 +13,7 @@ mongoose.connect(process.env.MONGO_URI)
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
+  token: String,
   created: { type: Date, default: Date.now }
 });
 
@@ -121,13 +122,31 @@ io.on("connection", socket => {
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) return cb({ ok:false, error:"Invalid login" });
 
+      const token = Math.random().toString(36).slice(2) + Date.now();
+      user.token = token;
+      await user.save();
+
       socket.username = username;
-      cb({ ok:true, username });
+      cb({ ok:true, username, token });
     } catch (err) {
       console.error(err);
       cb({ ok:false, error:"Server error" });
     }
   });
+
+
+  socket.on("tokenLogin", async ({ token }, cb) => {
+    try {
+      if (!token) return cb({ ok:false });
+      const user = await User.findOne({ token });
+      if (!user) return cb({ ok:false });
+      socket.username = user.username;
+      cb({ ok:true, username: user.username });
+    } catch {
+      cb({ ok:false });
+    }
+  });
+
 
   console.log("Client connected", socket.id);
 
@@ -303,10 +322,3 @@ setInterval(() => {
 server.listen(PORT, () => {
   console.log("Rivals 2 server listening on", PORT);
 });
-
-
-// === FIXED SPAWN POSITIONS FOR ROUNDS ===
-const FIXED_SPAWNS = [
-  { x: 400, y: 100 },
-  { x: 400, y: 500 }
-];
