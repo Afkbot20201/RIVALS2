@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,46 +16,185 @@
     </div>
     <div class="top-right">
       <span class="pill pill-online"><span class="dot"></span>Connected</span>
-      <button id="logoutBtn" class="pill pill-ghost hidden">Logout</button>
+      <button class="pill pill-ghost" onclick="window.open('https://github.com','_blank')">
+        View on GitHub
+      </button>
     </div>
   </header>
 
   <main class="main">
+    <!-- Lobby -->
     <section id="lobby-panel" class="card card-lobby">
-
-      <div id="auth-panel" class="auth-panel">
-        <div class="auth-tabs">
-          <button class="auth-tab active" data-tab="login">Login</button>
-          <button class="auth-tab" data-tab="register">Register</button>
-        </div>
-
-        <div class="auth-content active" id="login">
-          <label>Username</label>
-          <input id="authUser" />
-          <label>Password</label>
-          <input id="authPass" type="password" />
-          <div class="remember-row">
-            <input type="checkbox" id="rememberMe">
-            <label for="rememberMe">Remember me</label>
+      <div class="card-header">
+        <h1>Rivals 2 Lobby</h1>
+        <p>Party up, complete tasks, and jump into fast-paced duels.</p>
+      </div>
+      <div class="card-body lobby-layout">
+        <aside class="tasks-panel">
+          <h3>Daily Tasks</h3>
+          <div class="task">
+            <div class="task-title">Play duels</div>
+            <div class="task-bar">
+              <div id="task-play-fill" class="task-bar-fill"></div>
+            </div>
+            <div class="task-meta"><span id="task-play-text">0 / 5</span></div>
           </div>
-          <button id="loginBtn" class="btn play-btn">Login</button>
-        </div>
+          <div class="task">
+            <div class="task-title">Eliminations</div>
+            <div class="task-bar">
+              <div id="task-elim-fill" class="task-bar-fill"></div>
+            </div>
+            <div class="task-meta"><span id="task-elim-text">0 / 15</span></div>
+          </div>
+          <div class="task">
+            <div class="task-title">Win a duel</div>
+            <div class="task-bar">
+              <div id="task-win-fill" class="task-bar-fill"></div>
+            </div>
+            <div class="task-meta"><span id="task-win-text">0 / 2</span></div>
+          </div>
+        </aside>
 
-        <div class="auth-content" id="register">
-          <label>Username</label>
-          <input id="regUser" />
-          <label>Password</label>
-          <input id="regPass" type="password" />
-          <label>Confirm Password</label>
-          <input id="regConfirm" type="password" />
-          <button id="registerBtn" class="btn play-btn">Register</button>
-        </div>
+        <div class="lobby-main">
+          <div class="player-name-row">
+            <label>Player name</label>
+            <div class="input-wrapper">
+              <input id="playerName" maxlength="20" placeholder="Type your nickname" />
+            </div>
+          </div>
 
-        <div id="authError" class="alert hidden"></div>
+          <div class="play-row">
+            <button id="createRoomBtn" class="btn play-btn">
+              Play (Create Room)
+            </button>
+
+            <div class="join-area">
+              <span class="join-label">Join by code</span>
+              <div class="input-wrapper join-wrapper">
+                <input id="roomCode" maxlength="5" placeholder="ABCDE" />
+                <button id="joinRoomBtn" class="btn join-btn">Join</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="roomMeta" class="room-meta"></div>
+
+          <div class="players-card">
+            <div class="players-header">
+              <span>Players in room</span>
+              <button id="startGameBtn" class="btn start-btn" disabled>Start Game</button>
+            </div>
+            <ul id="playersList"></ul>
+          </div>
+
+          <div id="lobbyError" class="alert hidden"></div>
+        </div>
       </div>
 
+      <footer class="card-footer">
+        <nav class="bottom-nav">
+          <button class="nav-item">Backpack</button>
+          <button class="nav-item">Weapons</button>
+          <button class="nav-item nav-item-main">Play</button>
+          <button class="nav-item">Shop</button>
+          <button class="nav-item">Settings</button>
+          <button class="nav-item">Event</button>
+        </nav>
+      </footer>
     </section>
-  </main>
+
+    <!-- Game -->
+    <section id="game-panel" class="card card-game hidden">
+      <div class="game-header">
+        <div>
+          <div class="label">Room</div>
+          <div id="roomCodeLabel" class="room-code-pill">-----</div>
+        </div>
+        <div class="game-stats">
+          <div class="stat">
+            <span class="label">HP</span>
+            <div class="hp-bar">
+              <div id="hpBarFill" class="hp-bar-fill"></div>
+            </div>
+          </div>
+          <div class="stat">
+            <span class="label">Score</span>
+            <span id="scoreLabel" class="stat-value">0</span>
+          </div>
+        </div>
+        <button id="leaveGameBtn" class="btn small">Leave</button>
+      </div>
+      <div class="game-body">
+        <div class="canvas-wrapper">
+          <canvas id="gameCanvas"></canvas>
+          <div id="gameOverlay" class="game-overlay hidden"></div>
+        </div>
+        <aside class="scoreboard">
+          <h3>Scoreboard</h3>
+          <ul id="scoreboardList"></ul>
+        </aside>
+      </div>
+    </section>
+  
+  <div id="auth-panel">
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Login</button>
+        <button class="auth-tab" data-tab="register">Register</button>
+      </div>
+
+      <div class="auth-content active" id="auth-login">
+        <div class="player-name-row">
+          <label>Username</label>
+          <div class="input-wrapper">
+            <input id="authUser" maxlength="20" placeholder="Your username" />
+          </div>
+        </div>
+        <div class="player-name-row">
+          <label>Password</label>
+          <div class="input-wrapper">
+            <input id="authPass" type="password" placeholder="Password" />
+          </div>
+        </div>
+        <div class="remember-row">
+          <input type="checkbox" id="rememberMe" />
+          <label for="rememberMe">Remember me</label>
+        </div>
+        <div class="auth-actions">
+          <button id="loginBtn" class="btn play-btn">Login</button>
+        </div>
+      </div>
+
+      <div class="auth-content" id="auth-register">
+        <div class="player-name-row">
+          <label>Username</label>
+          <div class="input-wrapper">
+            <input id="regUser" maxlength="20" placeholder="Choose a username" />
+          </div>
+        </div>
+        <div class="player-name-row">
+          <label>Password</label>
+          <div class="input-wrapper">
+            <input id="regPass" type="password" placeholder="Password" />
+          </div>
+        </div>
+        <div class="player-name-row">
+          <label>Confirm password</label>
+          <div class="input-wrapper">
+            <input id="regConfirm" type="password" placeholder="Repeat password" />
+          </div>
+        </div>
+        <div class="auth-actions">
+          <button id="registerBtn" class="btn play-btn">Register</button>
+        </div>
+      </div>
+
+      <div id="authError" class="alert hidden"></div>
+    </div>
+  </div>
+
+
+</main>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
