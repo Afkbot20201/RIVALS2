@@ -590,3 +590,46 @@ body,html {
   flex:1;
   justify-content:center;
 }
+
+/* === Auth Tabs === */
+.auth-card {
+  background: rgba(15,23,42,0.7);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 8px;
+  border-radius: 999px;
+  background: rgba(148,163,184,0.1);
+  border: 1px solid rgba(148,163,184,0.2);
+  color: #cbd5f5;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.auth-tab.active {
+  background: linear-gradient(135deg,#38bdf8,#818cf8);
+  color: #020617;
+}
+
+.auth-tab-content {
+  display: none;
+}
+
+.auth-tab-content.active {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.full {
+  width: 100%;
+}
