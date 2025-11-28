@@ -592,65 +592,33 @@ body,html {
 }
 
 
-/* Auth Tabs */
-.auth-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.auth-tab {
-  flex: 1;
-  padding: 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(148,163,184,0.4);
-  background: rgba(15,23,42,0.9);
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 12px;
-  text-transform: uppercase;
-  transition: all 0.25s ease;
-}
-
-.auth-tab.active {
-  background: linear-gradient(90deg,#38bdf8,#a855f7);
-  color: #020617;
-  border-color: transparent;
-}
-
-/* Smooth confirm password animation */
-.confirm-row {
-  max-height: 0;
+.round-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(15, 23, 42, 0.9);
+  padding: 22px 48px;
+  border-radius: 16px;
+  font-size: 28px;
+  font-weight: 700;
   opacity: 0;
-  overflow: hidden;
-  transform: translateY(-6px);
-  transition: all 0.25s ease;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 1000;
 }
 
-.confirm-row.show {
-  max-height: 80px;
+.round-overlay.show {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, -50%) scale(1.05);
 }
 
-/* White Logout Pill */
-.pill-white {
-  border-color: rgba(255,255,255,0.6);
-  color: white;
-  background: rgba(255,255,255,0.06);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.pill-white:hover {
-  background: rgba(255,255,255,0.15);
-}
-
-
-.game-overlay {
-  animation: fadeScale 0.4s ease;
-}
-
-@keyframes fadeScale {
-  from { opacity:0; transform:scale(0.9); }
-  to { opacity:1; transform:scale(1); }
+.round-timer {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  color: #38bdf8;
+  z-index: 1000;
 }

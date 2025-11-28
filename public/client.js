@@ -2,22 +2,6 @@
 (() => {
   const socket = io();
 
-  // ===== Persistent Login =====
-  const savedToken = localStorage.getItem("authToken");
-  if (savedToken) {
-    socket.emit("tokenLogin", { token: savedToken }, res => {
-      if (res.ok) {
-        currentUsername = res.username;
-        playerNameInput.value = res.username;
-        playerNameInput.disabled = true;
-        const authPanel = document.getElementById("auth-panel");
-        if (authPanel) authPanel.style.display = "none";
-      } else {
-        localStorage.removeItem("authToken");
-      }
-    });
-  }
-
 
   const authUser = document.getElementById("authUser");
   const authPass = document.getElementById("authPass");
@@ -88,7 +72,6 @@
         return;
       }
       setAuthError("");
-      localStorage.setItem("authToken", res.token);
       currentUsername = res.username;
       playerNameInput.value = res.username;
       playerNameInput.disabled = true;
@@ -97,14 +80,7 @@
     });
   });
 
-  const authConfirm = document.getElementById("authConfirm");
-
   registerBtn.addEventListener("click", () => {
-    if (!authConfirm || authPass.value !== authConfirm.value) {
-      setAuthError("Passwords do not match");
-      return;
-    }
-
     socket.emit("register", {
       username: authUser.value.trim(),
       password: authPass.value
@@ -506,16 +482,9 @@
   draw();
 })();
 
-
-// ===== Logout =====
-const logoutBtn = document.getElementById("logoutBtn");
-if (logoutBtn) {
-  logoutBtn.addEventListener("click", () => {
-    localStorage.removeItem("authToken");
-    location.reload();
-  });
-}
-
+// ===== ROUND UI =====
+const roundOverlay = document.getElementById("roundOverlay");
+const roundTimerEl = document.getElementById("roundTimer");
 
 let currentRound = 1;
 let roundTime = 90;
@@ -523,25 +492,31 @@ let roundTime = 90;
 socket.on("roundStart", data => {
   currentRound = data.round;
   roundTime = data.time;
-
-  gameOverlay.textContent = "ROUND " + currentRound;
-  gameOverlay.classList.remove("hidden");
-  setTimeout(() => gameOverlay.classList.add("hidden"), 1200);
+  roundOverlay.textContent = "ROUND " + currentRound;
+  roundOverlay.classList.add("show");
+  setTimeout(() => roundOverlay.classList.remove("show"), 1200);
 });
 
 socket.on("roundResult", data => {
   if (data.winnerId === currentPlayerId) {
-    gameOverlay.textContent = "ROUND WON";
+    roundOverlay.textContent = "ROUND WON";
   } else if (!data.winnerId) {
-    gameOverlay.textContent = "DRAW";
+    roundOverlay.textContent = "DRAW";
   } else {
-    gameOverlay.textContent = "ROUND LOST";
+    roundOverlay.textContent = "ROUND LOST";
   }
-  gameOverlay.classList.remove("hidden");
-  setTimeout(() => gameOverlay.classList.add("hidden"), 1500);
+  roundOverlay.classList.add("show");
+  setTimeout(() => roundOverlay.classList.remove("show"), 1500);
 });
 
 socket.on("matchEnd", () => {
-  gameOverlay.textContent = "MATCH FINISHED";
-  gameOverlay.classList.remove("hidden");
+  roundOverlay.textContent = "MATCH FINISHED";
+  roundOverlay.classList.add("show");
 });
+
+setInterval(() => {
+  if (roundTime > 0) {
+    roundTime -= 1;
+    roundTimerEl.textContent = "TIME: " + roundTime;
+  }
+}, 1000);

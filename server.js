@@ -13,7 +13,6 @@ mongoose.connect(process.env.MONGO_URI)
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
-  token: String,
   created: { type: Date, default: Date.now }
 });
 
@@ -122,38 +121,20 @@ io.on("connection", socket => {
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) return cb({ ok:false, error:"Invalid login" });
 
-      const token = Math.random().toString(36).slice(2) + Date.now();
-      user.token = token;
-      await user.save();
-
       socket.username = username;
-      cb({ ok:true, username, token });
+      cb({ ok:true, username });
     } catch (err) {
       console.error(err);
       cb({ ok:false, error:"Server error" });
     }
   });
 
-
-  socket.on("tokenLogin", async ({ token }, cb) => {
-    try {
-      if (!token) return cb({ ok:false });
-      const user = await User.findOne({ token });
-      if (!user) return cb({ ok:false });
-      socket.username = user.username;
-      cb({ ok:true, username: user.username });
-    } catch {
-      cb({ ok:false });
-    }
-  });
-
-
   console.log("Client connected", socket.id);
 
   socket.on("createRoom", ({ name }, cb) => {
     if (!socket.username) return cb({ ok:false, error:"Not logged in" });
     const room = createRoom();
-    const spawn = randomPos();
+    const spawn = idx === 0 ? { x: 300, y: 80 } : { x: 300, y: 520 };
     const player = {
       id: socket.id,
       name: socket.username,
@@ -190,7 +171,7 @@ io.on("connection", socket => {
     if (!room) return cb({ ok:false, error:"Room not found" });
     if (room.status !== "lobby") return cb({ ok:false, error:"Game already started" });
 
-    const spawn = randomPos();
+    const spawn = idx === 0 ? { x: 300, y: 80 } : { x: 300, y: 520 };
     const player = {
       id: socket.id,
       name: socket.username,
@@ -225,19 +206,20 @@ io.on("connection", socket => {
 
     room.status = "running";
 
-    room.round = 1;
-    room.roundWins = {};
-    room.roundTimer = 90;
+room.round = 1;
+room.roundWins = {};
+room.roundTimer = 90;
 
-    for (const id of Object.keys(room.players)) {
-      room.roundWins[id] = 0;
-    }
+const ids = Object.keys(room.players);
+ids.forEach(id => room.roundWins[id] = 0);
+
+io.to(roomCode).emit("roundStart", { round: room.round, time: room.roundTimer });
 
     room.bullets = [];
     room.lastBulletId = 0;
 
     for (const p of Object.values(room.players)) {
-      const spawn = randomPos();
+      const spawn = idx === 0 ? { x: 300, y: 80 } : { x: 300, y: 520 };
       p.x = spawn.x;
       p.y = spawn.y;
       p.hp = PLAYER_MAX_HP;
@@ -306,35 +288,11 @@ setInterval(() => {
         const dy = p.y - b.y;
         if (dx*dx + dy*dy <= (PLAYER_RADIUS+BULLET_RADIUS)**2) {
           p.hp -= BULLET_DAMAGE;
-          
-if (p.hp <= 0) {
-  room.roundWins[b.ownerId]++;
-
-  io.to(room.code).emit("roundResult", {
-    winnerId: b.ownerId,
-    type: "kill"
-  });
-
-  room.round++;
-  if (room.round > 5) {
-    io.to(room.code).emit("matchEnd", { wins: room.roundWins });
-    room.status = "lobby";
-    return;
-  }
-
-  room.roundTimer = 90;
-  room.bullets = [];
-
-  for (const pl of Object.values(room.players)) {
-    const spawn = randomPos();
-    pl.x = spawn.x;
-    pl.y = spawn.y;
-    pl.hp = PLAYER_MAX_HP;
-  }
-
-  io.to(room.code).emit("roundStart", { round: room.round, time: room.roundTimer });
-}
-
+          if (room.status === "running" && p.hp <= 0) {
+            p.hp = PLAYER_MAX_HP;
+            p.score++;
+            Object.assign(p, randomPos());
+          }
           hit = true;
           break;
         }
@@ -343,40 +301,6 @@ if (p.hp <= 0) {
       if (!hit) alive.push(b);
     }
     room.bullets = alive;
-
-    if (room.roundTimer !== undefined) {
-      room.roundTimer -= DT;
-      if (room.roundTimer <= 0) {
-        const alive = Object.values(room.players).filter(p => p.hp > 0);
-        let winnerId = null;
-
-        if (alive.length === 1) winnerId = alive[0].id;
-
-        if (winnerId) room.roundWins[winnerId]++;
-
-        io.to(room.code).emit("roundResult", {
-          winnerId,
-          type: "timeout"
-        });
-
-        room.round++;
-        if (room.round > 5) {
-          io.to(room.code).emit("matchEnd", { wins: room.roundWins });
-          room.status = "lobby";
-        } else {
-          room.roundTimer = 90;
-          room.bullets = [];
-          for (const p of Object.values(room.players)) {
-            const spawn = randomPos();
-            p.x = spawn.x;
-            p.y = spawn.y;
-            p.hp = PLAYER_MAX_HP;
-          }
-          io.to(room.code).emit("roundStart", { round: room.round, time: room.roundTimer });
-        }
-      }
-    }
-
 
     io.to(room.code).emit("gameState", {
       players: Object.values(room.players),
