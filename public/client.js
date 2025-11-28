@@ -2,14 +2,16 @@
 (() => {
   const socket = io();
 
+  // Remember last username
+  const lastUser = localStorage.getItem("lastUsername");
+  if (lastUser) authUser.value = lastUser;
+
   // Persistent Login
   const savedToken = localStorage.getItem("authToken");
   if (savedToken) {
     socket.emit("tokenLogin", { token: savedToken }, res => {
       if (res.ok) {
         currentUsername = res.username;
-        playerNameInput.value = res.username;
-        playerNameInput.disabled = true;
         const authPanel = document.getElementById("auth-panel");
         if (authPanel) authPanel.style.display = "none";
       } else {
@@ -89,9 +91,8 @@
       }
       setAuthError("");
       localStorage.setItem("authToken", res.token);
+      localStorage.setItem("lastUsername", res.username);
       currentUsername = res.username;
-      playerNameInput.value = res.username;
-      playerNameInput.disabled = true;
       const authPanel = document.getElementById("auth-panel");
       if (authPanel) authPanel.style.display = "none";
     });
@@ -500,8 +501,38 @@
 })();
 
 
-// ===== Confirm Password Validation =====
+// Strength meter
+const strengthFill = document.getElementById("pwStrengthFill");
+authPass.addEventListener("input", () => {
+  let score = 0;
+  const v = authPass.value;
+  if (v.length > 5) score += 30;
+  if (/[A-Z]/.test(v)) score += 20;
+  if (/[0-9]/.test(v)) score += 20;
+  if (/[^A-Za-z0-9]/.test(v)) score += 30;
+  strengthFill.style.width = Math.min(score,100) + "%";
+});
+
+// Confirm match
 const authConfirm = document.getElementById("authConfirm");
+const confirmCheck = document.getElementById("confirmCheck");
+authConfirm.addEventListener("input", () => {
+  if (authPass.value && authPass.value === authConfirm.value) {
+    confirmCheck.classList.remove("hidden");
+  } else {
+    confirmCheck.classList.add("hidden");
+  }
+});
+
+// Password toggles
+document.querySelectorAll(".pw-toggle").forEach(t => {
+  t.addEventListener("click", () => {
+    const input = document.getElementById(t.dataset.target);
+    input.type = input.type === "password" ? "text" : "password";
+  });
+});
+
+// Confirm validation on register
 registerBtn.addEventListener("click", () => {
   if (authPass.value !== authConfirm.value) {
     setAuthError("Passwords do not match");
@@ -509,7 +540,7 @@ registerBtn.addEventListener("click", () => {
   }
 });
 
-// ===== Logout =====
+// Logout
 const logoutBtn = document.getElementById("logoutBtn");
 logoutBtn.addEventListener("click", () => {
   localStorage.removeItem("authToken");

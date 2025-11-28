@@ -76,15 +76,21 @@
 
   <div class="player-name-row">
     <label>Password</label>
-    <div class="input-wrapper">
+    <div class="input-wrapper pw-wrapper">
       <input id="authPass" type="password" placeholder="Password" />
+      <span class="pw-toggle" data-target="authPass">👁</span>
+    </div>
+    <div class="pw-strength">
+      <div id="pwStrengthFill" class="pw-strength-fill"></div>
     </div>
   </div>
 
   <div class="player-name-row confirm-row hidden">
     <label>Confirm Password</label>
-    <div class="input-wrapper">
+    <div class="input-wrapper pw-wrapper">
       <input id="authConfirm" type="password" placeholder="Confirm Password" />
+      <span id="confirmCheck" class="confirm-check hidden">✔</span>
+      <span class="pw-toggle" data-target="authConfirm">👁</span>
     </div>
   </div>
 
