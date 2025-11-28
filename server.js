@@ -144,6 +144,44 @@ function startNextRound(room, winnerId = null) {
   });
 }
 
+function startNextRound(room, winnerId = null) {
+  if (!room.roundWins) room.roundWins = {};
+
+  if (winnerId && room.roundWins[winnerId] != null) {
+    room.roundWins[winnerId]++;
+  }
+
+  // End match
+  if (winnerId && room.roundWins[winnerId] >= MAX_ROUNDS_WIN) {
+    room.status = "lobby";
+    io.to(room.code).emit("matchEnd", {
+      winnerId,
+      wins: room.roundWins
+    });
+    return;
+  }
+
+  // Start new round
+  room.round++;
+  room.roundEndTime = Date.now() + ROUND_TIME * 1000;
+
+  const ids = Object.keys(room.players);
+  ids.forEach((id, i) => {
+    const p = room.players[id];
+    p.hp = PLAYER_MAX_HP;
+    p.alive = true;
+
+    // top / bottom spawn
+    p.x = ARENA_WIDTH / 2;
+    p.y = i === 0 ? 80 : ARENA_HEIGHT - 80;
+  });
+
+  io.to(room.code).emit("newRound", {
+    round: room.round,
+    wins: room.roundWins
+  });
+}
+
 // ===== Socket.IO =====
 
 io.on("connection", socket => {
@@ -245,6 +283,10 @@ io.on("connection", socket => {
       roomCode: room.code,
       playerId: socket.id,
       isHost: true,
+      round: 0,
+      roundWins: {},
+      roundEndTime: 0,
+
       arena: { width: ARENA_WIDTH, height: ARENA_HEIGHT }
     });
 
@@ -311,61 +353,30 @@ io.on("connection", socket => {
     });
   });
 
-  socket.on("startGame", ({ roomCode }) => {
-    const room = rooms[roomCode];
-    if (!room || room.hostId !== socket.id) return;
+ socket.on("startGame", ({ roomCode }) => {
+  const room = rooms[roomCode];
+  if (!room || room.hostId !== socket.id) return;
 
-room.status = "running";
-room.bullets = [];
-room.lastBulletId = 0;
+  room.status = "running";
+  room.bullets = [];
+  room.lastBulletId = 0;
 
-room.round = 1;
-room.roundEndTime = Date.now() + ROUND_TIME * 1000;
-room.roundWins = {};
-const ids = Object.keys(room.players);
-ids.forEach(id => room.roundWins[id] = 0);
+  room.round = 1;
+  room.roundEndTime = Date.now() + ROUND_TIME * 1000;
+  room.roundWins = {};
 
-ids.forEach((id, i) => {
-  const p = room.players[id];
-  p.hp = PLAYER_MAX_HP;
-  p.alive = true;
-  p.x = ARENA_WIDTH / 2;
-  p.y = i === 0 ? 80 : ARENA_HEIGHT - 80;
-});
+  const ids = Object.keys(room.players);
+  ids.forEach(id => room.roundWins[id] = 0);
 
-io.to(roomCode).emit("gameStarted");
+  ids.forEach((id, i) => {
+    const p = room.players[id];
+    p.hp = PLAYER_MAX_HP;
+    p.alive = true;
+    p.x = ARENA_WIDTH / 2;
+    p.y = i === 0 ? 80 : ARENA_HEIGHT - 80;
   });
 
-  socket.on("playerInput", ({ roomCode, input }) => {
-    const room = rooms[roomCode];
-    if (!room) return;
-    const p = room.players[socket.id];
-    if (!p) return;
-    p.input = input;
-    if (typeof input.angle === "number") p.angle = input.angle;
-  });
-
-  socket.on("shoot", ({ roomCode, angle }) => {
-    const room = rooms[roomCode];
-    const p = room?.players[socket.id];
-    if (!room || !p || room.status !== "running") return;
-
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-
-    room.bullets.push({
-      id: ++room.lastBulletId,
-      x: p.x + cos * (PLAYER_RADIUS + 8),
-      y: p.y + sin * (PLAYER_RADIUS + 8),
-      vx: cos * BULLET_SPEED,
-      vy: sin * BULLET_SPEED,
-      ownerId: p.id
-    });
-  });
-
-  socket.on("disconnect", () => {
-    removePlayer(socket.id);
-  });
+  io.to(roomCode).emit("gameStarted");
 });
 
 // ===== Game Loop =====
@@ -452,6 +463,21 @@ io.to(room.code).emit("roundState", {
   wins: room.roundWins
 });
 
+if (timeLeft === 0) {
+  startNextRound(room, null);
+}
+const timeLeft = Math.max(
+  0,
+  Math.floor((room.roundEndTime - Date.now()) / 1000)
+);
+
+io.to(room.code).emit("roundState", {
+  round: room.round,
+  timeLeft,
+  wins: room.roundWins
+});
+
+// timeout draw
 if (timeLeft === 0) {
   startNextRound(room, null);
 }
