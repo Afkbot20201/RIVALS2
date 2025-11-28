@@ -2,16 +2,13 @@
 (() => {
   const socket = io();
 
-  const loginUser = document.getElementById("loginUser");
-  const loginPass = document.getElementById("loginPass");
-  const regUser = document.getElementById("regUser");
-  const regPass = document.getElementById("regPass");
-  const regPass2 = document.getElementById("regPass2");
-  const rememberMe = document.getElementById("rememberMe");
 
+  const authUser = document.getElementById("authUser");
+  const authPass = document.getElementById("authPass");
   const loginBtn = document.getElementById("loginBtn");
   const registerBtn = document.getElementById("registerBtn");
   const authError = document.getElementById("authError");
+
 
   const lobbyPanel = document.getElementById("lobby-panel");
   const gamePanel = document.getElementById("game-panel");
@@ -54,6 +51,7 @@
   let lastShootTime = 0;
   const SHOOT_COOLDOWN = 200;
 
+
   function setAuthError(msg) {
     if (!msg) {
       authError.classList.add("hidden");
@@ -64,60 +62,28 @@
     }
   }
 
-  const logoutBtn = document.getElementById("logoutBtn");
-
-  document.querySelectorAll(".auth-tab").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".auth-tab").forEach(b => b.classList.remove("active"));
-      document.querySelectorAll(".auth-tab-content").forEach(c => c.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById(btn.dataset.tab + "Tab").classList.add("active");
-      setAuthError("");
-    });
-  });
-
-  const savedToken = localStorage.getItem("sessionToken");
-  if (savedToken) {
-    socket.emit("resumeSession", savedToken, res => {
-      if (res.ok) afterLogin(res.username);
-      else localStorage.removeItem("sessionToken");
-    });
-  }
-
-  function afterLogin(username) {
-    currentUsername = username;
-    playerNameInput.value = username;
-    playerNameInput.disabled = true;
-    document.getElementById("auth-panel").style.display = "none";
-    logoutBtn.classList.remove("hidden");
-  }
-
   loginBtn.addEventListener("click", () => {
     socket.emit("login", {
-      username: loginUser.value.trim(),
-      password: loginPass.value
+      username: authUser.value.trim(),
+      password: authPass.value
     }, res => {
       if (!res.ok) {
         setAuthError(res.error);
         return;
       }
       setAuthError("");
-      if (rememberMe.checked) {
-        localStorage.setItem("sessionToken", res.token);
-      }
-      afterLogin(res.username);
+      currentUsername = res.username;
+      playerNameInput.value = res.username;
+      playerNameInput.disabled = true;
+      const authPanel = document.getElementById("auth-panel");
+      if (authPanel) authPanel.style.display = "none";
     });
   });
 
   registerBtn.addEventListener("click", () => {
-    if (regPass.value !== regPass2.value) {
-      setAuthError("Passwords do not match.");
-      return;
-    }
-
     socket.emit("register", {
-      username: regUser.value.trim(),
-      password: regPass.value
+      username: authUser.value.trim(),
+      password: authPass.value
     }, res => {
       if (!res.ok) {
         setAuthError(res.error);
@@ -127,15 +93,240 @@
     });
   });
 
-  logoutBtn.addEventListener("click", () => {
-    const token = localStorage.getItem("sessionToken");
-    socket.emit("logout", token);
-    localStorage.removeItem("sessionToken");
-    location.reload();
+  function setLobbyError(msg) {
+    if (!msg) {
+      lobbyErrorEl.classList.add("hidden");
+      lobbyErrorEl.textContent = "";
+    } else {
+      lobbyErrorEl.classList.remove("hidden");
+      lobbyErrorEl.textContent = msg;
+    }
+  }
+
+  function updateRoomMeta() {
+    if (!currentRoomCode) {
+      roomMetaEl.textContent = "";
+      return;
+    }
+    roomMetaEl.textContent = "Share your room code so friends can join: " + currentRoomCode;
+  }
+
+  function renderPlayersList(players, hostId) {
+    playersListEl.innerHTML = "";
+    if (!players || !players.length) {
+      const li = document.createElement("li");
+      li.style.justifyContent = "center";
+      li.style.fontSize = "12px";
+      li.style.color = "#94a3b8";
+      li.textContent = "Waiting for players...";
+      playersListEl.appendChild(li);
+      return;
+    }
+    for (const p of players) {
+      const li = document.createElement("li");
+      const left = document.createElement("div");
+      left.className = "name";
+      const avatar = document.createElement("div");
+      avatar.className = "player-avatar";
+      avatar.textContent = (p.name[0] || "?").toUpperCase();
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = p.name;
+      left.appendChild(avatar);
+      left.appendChild(nameSpan);
+
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.gap = "8px";
+      right.style.fontSize = "11px";
+      right.style.color = "#94a3b8";
+      const score = document.createElement("span");
+      score.textContent = p.score ?? 0;
+      right.appendChild(score);
+      if (p.id === hostId) {
+        const hostBadge = document.createElement("span");
+        hostBadge.textContent = "Host";
+        hostBadge.style.borderRadius = "999px";
+        hostBadge.style.border = "1px solid rgba(56,189,248,0.7)";
+        hostBadge.style.padding = "2px 8px";
+        hostBadge.style.fontSize = "10px";
+        right.appendChild(hostBadge);
+      }
+      li.appendChild(left);
+      li.appendChild(right);
+      playersListEl.appendChild(li);
+    }
+  }
+
+  function switchToGame() {
+    lobbyPanel.classList.add("hidden");
+    gamePanel.classList.remove("hidden");
+    resizeCanvas();
+  }
+
+  function switchToLobby() {
+    gamePanel.classList.add("hidden");
+    lobbyPanel.classList.remove("hidden");
+  }
+
+  function updateTasksFromPlayer(player) {
+    if (!player) return;
+    const duels = currentRoomCode ? 1 : 0;
+    const elims = player.score || 0;
+    const wins = 0;
+
+    const playRatio = Math.min(1, duels / 5);
+    const elimRatio = Math.min(1, elims / 15);
+    const winRatio = Math.min(1, wins / 2);
+
+    taskPlayFill.style.width = (playRatio * 100) + "%";
+    taskElimFill.style.width = (elimRatio * 100) + "%";
+    taskWinFill.style.width = (winRatio * 100) + "%";
+
+    taskPlayText.textContent = duels + " / 5";
+    taskElimText.textContent = elims + " / 15";
+    taskWinText.textContent = wins + " / 2";
+  }
+
+  socket.on("lobbyUpdate", ({ players, hostId }) => {
+    renderPlayersList(players || [], hostId);
+    startGameBtn.disabled = !(hostId === currentPlayerId && players && players.length > 0);
   });
 
-  // --- Rest of original game logic left untouched ---
+  socket.on("gameStarted", () => {
+    switchToGame();
+    gameOverlay.classList.add("hidden");
+  });
 
+  socket.on("gameState", state => {
+    gameState = state;
+    arena = state.arena || arena;
+    const me = state.players.find(p => p.id === currentPlayerId);
+    if (me) {
+      const hpRatio = me.hp / 100;
+      hpBarFill.style.transform = "scaleX(" + hpRatio + ")";
+      scoreLabel.textContent = me.score;
+      updateTasksFromPlayer(me);
+    }
+    renderScoreboard(state);
+  });
+
+  function renderScoreboard(state) {
+    scoreboardList.innerHTML = "";
+    if (!state || !state.players || !state.players.length) return;
+    const sorted = [...state.players].sort((a,b)=>b.score-a.score);
+    for (const p of sorted) {
+      const li = document.createElement("li");
+      if (p.id === currentPlayerId) li.classList.add("me");
+      const left = document.createElement("div");
+      left.className = "name";
+      const avatar = document.createElement("div");
+      avatar.className = "player-avatar";
+      avatar.textContent = (p.name[0] || "?").toUpperCase();
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = p.name;
+      left.appendChild(avatar);
+      left.appendChild(nameSpan);
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.gap = "8px";
+      const score = document.createElement("span");
+      score.textContent = p.score ?? 0;
+      score.style.fontSize = "12px";
+      right.appendChild(score);
+      const hp = document.createElement("span");
+      hp.textContent = p.hp + " HP";
+      hp.style.fontSize = "11px";
+      right.appendChild(hp);
+      li.appendChild(left);
+      li.appendChild(right);
+      scoreboardList.appendChild(li);
+    }
+  }
+
+  function handleCreateRoom() {
+    if (!currentUsername) { setLobbyError("Please log in first."); return; }
+    const name = playerNameInput.value.trim();
+    if (!name) {
+      setLobbyError("Please enter a player name.");
+      return;
+    }
+    setLobbyError("");
+    createRoomBtn.disabled = true;
+    joinRoomBtn.disabled = true;
+    socket.emit("createRoom", { name }, resp => {
+      createRoomBtn.disabled = false;
+      joinRoomBtn.disabled = false;
+      if (!resp || !resp.ok) {
+        setLobbyError(resp?.error || "Failed to create room.");
+        return;
+      }
+      currentRoomCode = resp.roomCode;
+      currentPlayerId = resp.playerId;
+      isHost = resp.isHost;
+      arena = resp.arena || arena;
+      roomCodeLabel.textContent = currentRoomCode;
+      updateRoomMeta();
+    });
+  }
+
+  function handleJoinRoom() {
+    if (!currentUsername) { setLobbyError("Please log in first."); return; }
+    const name = playerNameInput.value.trim();
+    const code = roomCodeInput.value.trim().toUpperCase();
+    if (!name) {
+      setLobbyError("Please enter a player name.");
+      return;
+    }
+    if (!code) {
+      setLobbyError("Please enter a room code.");
+      return;
+    }
+    setLobbyError("");
+    createRoomBtn.disabled = true;
+    joinRoomBtn.disabled = true;
+    socket.emit("joinRoom", { name, roomCode: code }, resp => {
+      createRoomBtn.disabled = false;
+      joinRoomBtn.disabled = false;
+      if (!resp || !resp.ok) {
+        setLobbyError(resp?.error || "Failed to join room.");
+        return;
+      }
+      currentRoomCode = resp.roomCode;
+      currentPlayerId = resp.playerId;
+      isHost = resp.isHost;
+      arena = resp.arena || arena;
+      roomCodeLabel.textContent = currentRoomCode;
+      updateRoomMeta();
+    });
+  }
+
+  function handleStartGame() {
+    if (!currentRoomCode || !isHost) return;
+    socket.emit("startGame", { roomCode: currentRoomCode });
+    gameOverlay.textContent = "Loading arena...";
+    gameOverlay.classList.remove("hidden");
+  }
+
+  function handleLeaveGame() {
+    window.location.reload();
+  }
+
+  createRoomBtn.addEventListener("click", handleCreateRoom);
+  joinRoomBtn.addEventListener("click", handleJoinRoom);
+  startGameBtn.addEventListener("click", handleStartGame);
+  leaveGameBtn.addEventListener("click", handleLeaveGame);
+
+  playerNameInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      if (roomCodeInput.value.trim()) handleJoinRoom();
+      else handleCreateRoom();
+    }
+  });
+  roomCodeInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") handleJoinRoom();
+  });
+
+  // controls
   window.addEventListener("keydown", e => {
     if (e.repeat) return;
     const k = e.key.toLowerCase();
@@ -290,8 +481,3 @@
 
   draw();
 })();
-
-  logoutBtn.addEventListener("click", () => {
-    localStorage.removeItem("sessionToken");
-    location.reload();
-  });
