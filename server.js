@@ -1,3 +1,4 @@
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -13,6 +14,7 @@ mongoose.connect(process.env.MONGO_URI)
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
+  token: String,
   created: { type: Date, default: Date.now }
 });
 
@@ -95,7 +97,6 @@ function removePlayer(socketId) {
 // ===== Socket.IO =====
 io.on("connection", socket => {
 
-  // --- Mongo Auth ---
   socket.on("register", async ({ username, password }, cb) => {
     try {
       if (!username || !password) return cb({ ok:false, error:"Missing fields" });
@@ -121,11 +122,29 @@ io.on("connection", socket => {
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) return cb({ ok:false, error:"Invalid login" });
 
+      const token = Math.random().toString(36).slice(2) + Date.now();
+      user.token = token;
+      await user.save();
+
       socket.username = username;
-      cb({ ok:true, username });
+      cb({ ok:true, username, token });
     } catch (err) {
       console.error(err);
       cb({ ok:false, error:"Server error" });
+    }
+  });
+
+  socket.on("tokenLogin", async ({ token }, cb) => {
+    try {
+      if (!token) return cb({ ok:false });
+
+      const user = await User.findOne({ token });
+      if (!user) return cb({ ok:false });
+
+      socket.username = user.username;
+      cb({ ok:true, username: user.username });
+    } catch {
+      cb({ ok:false });
     }
   });
 

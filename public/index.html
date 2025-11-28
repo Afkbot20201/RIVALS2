@@ -58,71 +58,27 @@
 
         <div class="lobby-main">
           
-
-<div id="auth-panel">
-  <div class="auth-card">
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-tab="login">Login</button>
-      <button class="auth-tab" data-tab="register">Register</button>
+<div id="auth-panel" style="margin-bottom:14px;">
+  <div class="player-name-row">
+    <label>Username</label>
+    <div class="input-wrapper">
+      <input id="authUser" placeholder="Username" />
     </div>
-
-    <div id="auth-login" class="auth-content active">
-      <div class="player-name-row">
-        <label>Username</label>
-        <div class="input-wrapper">
-          <input id="authUser" placeholder="Username" />
-        </div>
-      </div>
-
-      <div class="player-name-row">
-        <label>Password</label>
-        <div class="input-wrapper">
-          <input id="authPass" type="password" placeholder="Password" />
-        </div>
-      </div>
-
-      <div class="remember-row">
-        <input type="checkbox" id="rememberMe" />
-        <label for="rememberMe">Remember me</label>
-      </div>
-
-      <div class="auth-actions">
-        <button id="loginBtn" class="btn play-btn">Login</button>
-      </div>
-    </div>
-
-    <div id="auth-register" class="auth-content">
-      <div class="player-name-row">
-        <label>Username</label>
-        <div class="input-wrapper">
-          <input id="regUser" placeholder="Username" />
-        </div>
-      </div>
-
-      <div class="player-name-row">
-        <label>Password</label>
-        <div class="input-wrapper">
-          <input id="regPass" type="password" placeholder="Password" />
-        </div>
-      </div>
-
-      <div class="player-name-row">
-        <label>Confirm password</label>
-        <div class="input-wrapper">
-          <input id="regConfirm" type="password" placeholder="Confirm password" />
-        </div>
-      </div>
-
-      <div class="auth-actions">
-        <button id="registerBtn" class="btn play-btn">Register</button>
-      </div>
-    </div>
-
-    <div id="authError" class="alert hidden"></div>
   </div>
-</div>
 
+  <div class="player-name-row">
+    <label>Password</label>
+    <div class="input-wrapper">
+      <input id="authPass" type="password" placeholder="Password" />
+    </div>
+  </div>
 
+  <div style="display:flex; gap:8px; margin-top:8px;">
+    <button id="loginBtn" class="btn join-btn">Login</button>
+    <button id="registerBtn" class="btn join-btn">Register</button>
+  </div>
+
+  <div id="authError" class="alert hidden"></div>
 </div>
 
 <div class="player-name-row">
@@ -149,7 +105,7 @@
           <div id="roomMeta" class="room-meta"></div>
 
           <div class="players-card">
-            <div class="players-header">
+            <div class="players-header">\n  <button id="logoutBtn" class="btn small">Logout</button>
               <span>Players in room</span>
               <button id="startGameBtn" class="btn start-btn" disabled>Start Game</button>
             </div>
