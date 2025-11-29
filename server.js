@@ -18,7 +18,6 @@ mongoose.connect(process.env.MONGO_URI);
 const UserSchema = new mongoose.Schema({
   username: { type: String, unique: true },
   password: String,
-  created: { type: Date, default: Date.now },
   lastLogin: Date
 });
 
@@ -26,15 +25,15 @@ const User = mongoose.model("User", UserSchema);
 
 const rooms = {};
 
-io.on("connection", (socket) => {
+io.on("connection", socket => {
+
   socket.on("register", async ({ username, password }, cb) => {
     try {
-      const hashed = await bcrypt.hash(password, 10);
-      const user = new User({ username, password: hashed });
-      await user.save();
+      const hash = await bcrypt.hash(password, 10);
+      await User.create({ username, password: hash });
       cb({ ok: true });
     } catch {
-      cb({ ok: false, error: "User exists" });
+      cb({ ok: false });
     }
   });
 
@@ -52,21 +51,19 @@ io.on("connection", (socket) => {
     cb({ ok: true, username });
   });
 
-  socket.on("createRoom", () => {
+  socket.on("createRoom", cb => {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     rooms[code] = { host: socket.id, players: {} };
     socket.join(code);
     rooms[code].players[socket.id] = { x: 0, z: 0 };
-    socket.emit("roomJoined", { code, host: true });
-    io.to(code).emit("roomUpdate", rooms[code]);
+    cb(code);
   });
 
-  socket.on("joinRoom", code => {
-    if (!rooms[code]) return;
+  socket.on("joinRoom", (code, cb) => {
+    if (!rooms[code]) return cb(false);
     socket.join(code);
     rooms[code].players[socket.id] = { x: 0, z: 0 };
-    socket.emit("roomJoined", { code, host: false });
-    io.to(code).emit("roomUpdate", rooms[code]);
+    cb(true);
   });
 
   socket.on("startGame", code => {

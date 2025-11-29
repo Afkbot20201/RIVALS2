@@ -6,16 +6,25 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="ui">
-    <h1>Multiplayer 3D Demo</h1>
-    <button id="create">Create Room</button>
-    <button id="start">Start Game</button>
-  </div>
 
-  <canvas id="gameCanvas"></canvas>
+<div id="auth">
+  <input id="user" placeholder="Username">
+  <input id="pass" placeholder="Password" type="password">
+  <button id="login">Login</button>
+  <button id="register">Register</button>
+</div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
-  <script src="client.js"></script>
+<div id="lobby" style="display:none">
+  <button id="create">Create Room</button>
+  <input id="roomInput" placeholder="Room Code">
+  <button id="join">Join</button>
+  <button id="start">Start Game</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
+<script src="client.js"></script>
 </body>
 </html>
