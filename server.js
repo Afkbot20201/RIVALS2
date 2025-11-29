@@ -1,496 +1,96 @@
+
+require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
-const path = require("path");
 const bcrypt = require("bcrypt");
 
-// ===== MongoDB =====
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.error("❌ MongoDB Error:", err));
-
-const UserSchema = new mongoose.Schema({
-  username: { type: String, unique: true },
-  password: String,
-  token: String,
-  elo: { type: Number, default: 1000 },
-  rank: { type: String, default: "Bronze" },
-  created: { type: Date, default: Date.now }
-});
-
-const User = mongoose.model("User", UserSchema);
-
-function getRank(elo) {
-  if (elo < 800) return "Bronze";
-  if (elo < 1100) return "Silver";
-  if (elo < 1400) return "Gold";
-  if (elo < 1700) return "Platinum";
-  if (elo < 2000) return "Diamond";
-  return "Nemesis";
-}
-
-// ===== Server =====
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3000;
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.json());
+app.use(express.static("public"));
 
-// ===== Game Config =====
+mongoose.connect(process.env.MONGO_URI);
+
+const UserSchema = new mongoose.Schema({
+  username: { type: String, unique: true },
+  password: String,
+  created: { type: Date, default: Date.now },
+  lastLogin: Date
+});
+
+const User = mongoose.model("User", UserSchema);
+
 const rooms = {};
-const TICK_RATE = 30;
-const DT = 1 / TICK_RATE;
-const ARENA_WIDTH = 1400;
-const ARENA_HEIGHT = 800;
-const PLAYER_SPEED = 260;
-const BULLET_SPEED = 520;
-const PLAYER_RADIUS = 18;
-const BULLET_RADIUS = 5;
-const PLAYER_MAX_HP = 100;
-const BULLET_DAMAGE = 25;
 
-// === ROUNDS ===
-const ROUND_TIME = 90; // seconds
-const MAX_ROUNDS_WIN = 5;
+io.on("connection", (socket) => {
 
-function randomPos() {
-  const margin = 80;
-  return {
-    x: margin + Math.random() * (ARENA_WIDTH - margin * 2),
-    y: margin + Math.random() * (ARENA_HEIGHT - margin * 2)
-  };
-}
-
-function createRoom() {
-  let code;
-  do {
-    code = Math.random().toString(36).substring(2, 7).toUpperCase();
-  } while (rooms[code]);
-  rooms[code] = {
-    code,
-    hostId: null,
-    status: "lobby",
-    players: {},
-    bullets: [],
-    lastBulletId: 0,
-    round: 0,
-    roundWins: {},
-    roundEndTime: 0
-  };
-  return rooms[code];
-}
-
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-
-function removePlayer(socketId) {
-  for (const code of Object.keys(rooms)) {
-    const room = rooms[code];
-    if (room.players[socketId]) {
-      delete room.players[socketId];
-      if (room.hostId === socketId) {
-        const ids = Object.keys(room.players);
-        room.hostId = ids.length ? ids[0] : null;
-      }
-      if (Object.keys(room.players).length === 0) {
-        delete rooms[code];
-      } else {
-        io.to(code).emit("lobbyUpdate", {
-          players: Object.values(room.players).map(p => ({
-            id: p.id,
-            name: p.name,
-            score: p.score
-          })),
-          hostId: room.hostId
-        });
-      }
-    }
-  }
-}
-
-
-function startNextRound(room, winnerId = null) {
-  if (winnerId && room.roundWins[winnerId] != null) {
-    room.roundWins[winnerId]++;
-  }
-
-  if (winnerId && room.roundWins[winnerId] >= MAX_ROUNDS_WIN) {
-    room.status = "lobby";
-    io.to(room.code).emit("matchEnd", {
-      winnerId,
-      wins: room.roundWins
-    });
-    return;
-  }
-
-  room.round++;
-  room.roundEndTime = Date.now() + ROUND_TIME * 1000;
-
-  const ids = Object.keys(room.players);
-  ids.forEach((id, i) => {
-    const p = room.players[id];
-    p.hp = PLAYER_MAX_HP;
-    p.alive = true;
-    p.x = ARENA_WIDTH / 2;
-    p.y = i === 0 ? 80 : ARENA_HEIGHT - 80;
-  });
-
-  io.to(room.code).emit("newRound", {
-    round: room.round,
-    wins: room.roundWins
-  });
-}
-
-function startNextRound(room, winnerId = null) {
-  if (!room.roundWins) room.roundWins = {};
-
-  if (winnerId && room.roundWins[winnerId] != null) {
-    room.roundWins[winnerId]++;
-  }
-
-  // End match
-  if (winnerId && room.roundWins[winnerId] >= MAX_ROUNDS_WIN) {
-    room.status = "lobby";
-    io.to(room.code).emit("matchEnd", {
-      winnerId,
-      wins: room.roundWins
-    });
-    return;
-  }
-
-  // Start new round
-  room.round++;
-  room.roundEndTime = Date.now() + ROUND_TIME * 1000;
-
-  const ids = Object.keys(room.players);
-  ids.forEach((id, i) => {
-    const p = room.players[id];
-    p.hp = PLAYER_MAX_HP;
-    p.alive = true;
-
-    // top / bottom spawn
-    p.x = ARENA_WIDTH / 2;
-    p.y = i === 0 ? 80 : ARENA_HEIGHT - 80;
-  });
-
-  io.to(room.code).emit("newRound", {
-    round: room.round,
-    wins: room.roundWins
-  });
-}
-
-// ===== Socket.IO =====
-
-io.on("connection", socket => {
-
-  // --- Mongo Auth ---
   socket.on("register", async ({ username, password }, cb) => {
     try {
-      if (!username || !password) return cb({ ok:false, error:"Missing fields" });
-
-      const exist = await User.findOne({ username });
-      if (exist) return cb({ ok:false, error:"Username already taken" });
-
-      const hash = await bcrypt.hash(password, 10);
-      await User.create({ username, password: hash });
-
-      cb({ ok:true });
+      const hashed = await bcrypt.hash(password, 10);
+      const user = new User({ username, password: hashed });
+      await user.save();
+      cb({ ok: true });
     } catch (err) {
-      console.error(err);
-      cb({ ok:false, error:"Server error" });
+      cb({ ok: false, error: "User already exists" });
     }
   });
 
   socket.on("login", async ({ username, password }, cb) => {
-    try {
-      const user = await User.findOne({ username });
-      if (!user) return cb({ ok:false, error:"Invalid login" });
+    const user = await User.findOne({ username });
+    if (!user) return cb({ ok: false });
 
-      const valid = await bcrypt.compare(password, user.password);
-      if (!valid) return cb({ ok:false, error:"Invalid login" });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return cb({ ok: false });
 
-      const token = Math.random().toString(36).slice(2) + Date.now();
-      user.token = token;
-      await user.save();
+    socket.username = username;
+    user.lastLogin = new Date();
+    await user.save();
 
-      socket.username = username;
-      cb({ ok:true, username, token });
-    } catch (err) {
-      console.error(err);
-      cb({ ok:false, error:"Server error" });
-    }
+    cb({ ok: true, username });
   });
 
-
-  socket.on("tokenLogin", async ({ token }, cb) => {
-    try {
-      if (!token) return cb({ ok:false });
-      const user = await User.findOne({ token });
-      if (!user) return cb({ ok:false });
-      socket.username = user.username;
-      cb({ ok:true, username: user.username });
-    } catch {
-      cb({ ok:false });
-    }
-  });
-
-
-  console.log("Client connected", socket.id);
-
-  socket.on("createRoom", async ({ name }, cb) => {
-    if (!socket.username) return cb({ ok:false, error:"Not logged in" });
-    const room = createRoom();
-    const spawn = randomPos();
-    const player = {
-      id: socket.id,
-      name: socket.username,
-      x: spawn.x,
-      y: spawn.y,
-      angle: 0,
-      hp: PLAYER_MAX_HP,
-      score: 0,
-      input: { up:false, down:false, left:false, right:false }
+  socket.on("createRoom", () => {
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    rooms[code] = {
+      host: socket.id,
+      players: {}
     };
-    // attach elo + rank from DB
-    try {
-      const u = await User.findOne({ username: socket.username });
-      if (u) {
-        player.elo = u.elo ?? 1000;
-        player.rank = u.rank ?? getRank(player.elo);
-      }
-    } catch (e) {
-      console.error("ELO lookup error (joinRoom):", e);
-    }
-    // attach elo + rank from DB
-    try {
-      const u = await User.findOne({ username: socket.username });
-      if (u) {
-        player.elo = u.elo ?? 1000;
-        player.rank = u.rank ?? getRank(player.elo);
-      }
-    } catch (e) {
-      console.error("ELO lookup error (createRoom):", e);
-    }
-    room.players[socket.id] = player;
-    room.hostId = socket.id;
-    socket.join(room.code);
-
-    cb({
-      ok: true,
-      roomCode: room.code,
-      playerId: socket.id,
-      isHost: true,
-      round: 0,
-      roundWins: {},
-      roundEndTime: 0,
-
-      arena: { width: ARENA_WIDTH, height: ARENA_HEIGHT }
-    });
-
-    io.to(room.code).emit("lobbyUpdate", {
-      players: Object.values(room.players),
-      hostId: room.hostId
-    });
-  });
-
-  socket.on("joinRoom", async ({ roomCode }, cb) => {
-    if (!socket.username) return cb({ ok:false, error:"Not logged in" });
-
-    const code = (roomCode || "").trim().toUpperCase();
-    const room = rooms[code];
-    if (!room) return cb({ ok:false, error:"Room not found" });
-    if (room.status !== "lobby") return cb({ ok:false, error:"Game already started" });
-
-    const spawn = randomPos();
-    const player = {
-      id: socket.id,
-      name: socket.username,
-      x: spawn.x,
-      y: spawn.y,
-      angle: 0,
-      hp: PLAYER_MAX_HP,
-      score: 0,
-      input: { up:false, down:false, left:false, right:false }
-    };
-    // attach elo + rank from DB
-    try {
-      const u = await User.findOne({ username: socket.username });
-      if (u) {
-        player.elo = u.elo ?? 1000;
-        player.rank = u.rank ?? getRank(player.elo);
-      }
-    } catch (e) {
-      console.error("ELO lookup error (joinRoom):", e);
-    }
-    // attach elo + rank from DB
-    try {
-      const u = await User.findOne({ username: socket.username });
-      if (u) {
-        player.elo = u.elo ?? 1000;
-        player.rank = u.rank ?? getRank(player.elo);
-      }
-    } catch (e) {
-      console.error("ELO lookup error (createRoom):", e);
-    }
-
-    room.players[socket.id] = player;
     socket.join(code);
-
-    cb({
-      ok: true,
-      roomCode: code,
-      playerId: socket.id,
-      isHost: socket.id === room.hostId,
-      arena: { width: ARENA_WIDTH, height: ARENA_HEIGHT }
-    });
-
-    io.to(code).emit("lobbyUpdate", {
-      players: Object.values(room.players),
-      hostId: room.hostId
-    });
+    rooms[code].players[socket.id] = { x: 0, y: 0, z: 0 };
+    socket.emit("roomJoined", { code, host: true });
+    io.to(code).emit("roomUpdate", rooms[code]);
   });
 
- socket.on("startGame", ({ roomCode }) => {
-  const room = rooms[roomCode];
-  if (!room || room.hostId !== socket.id) return;
-
-  room.status = "running";
-  room.bullets = [];
-  room.lastBulletId = 0;
-
-  room.round = 1;
-  room.roundEndTime = Date.now() + ROUND_TIME * 1000;
-  room.roundWins = {};
-
-  const ids = Object.keys(room.players);
-  ids.forEach(id => room.roundWins[id] = 0);
-
-  ids.forEach((id, i) => {
-    const p = room.players[id];
-    p.hp = PLAYER_MAX_HP;
-    p.alive = true;
-    p.x = ARENA_WIDTH / 2;
-    p.y = i === 0 ? 80 : ARENA_HEIGHT - 80;
+  socket.on("joinRoom", (code) => {
+    if (!rooms[code]) return;
+    socket.join(code);
+    rooms[code].players[socket.id] = { x: 0, y: 0, z: 0 };
+    socket.emit("roomJoined", { code, host: false });
+    io.to(code).emit("roomUpdate", rooms[code]);
   });
 
-  io.to(roomCode).emit("gameStarted");
-});
+  socket.on("startGame", (code) => {
+    io.to(code).emit("gameStarted");
+  });
 
-// ===== Game Loop =====
-setInterval(() => {
-  for (const room of Object.values(rooms)) {
-    if (room.status !== "running") continue;
-
-    for (const p of Object.values(room.players)) {
-      const i = p.input || {};
-      let dx = (i.right||0) - (i.left||0);
-      let dy = (i.down||0) - (i.up||0);
-      const len = Math.hypot(dx, dy) || 1;
-      dx /= len; dy /= len;
-
-      p.x = clamp(p.x + dx * PLAYER_SPEED * DT, PLAYER_RADIUS, ARENA_WIDTH - PLAYER_RADIUS);
-      p.y = clamp(p.y + dy * PLAYER_SPEED * DT, PLAYER_RADIUS, ARENA_HEIGHT - PLAYER_RADIUS);
+  socket.on("move", ({ code, x, z }) => {
+    if (rooms[code] && rooms[code].players[socket.id]) {
+      rooms[code].players[socket.id].x = x;
+      rooms[code].players[socket.id].z = z;
+      io.to(code).emit("gameState", rooms[code].players);
     }
+  });
 
-    const alive = [];
-    for (const b of room.bullets) {
-      b.x += b.vx * DT;
-      b.y += b.vy * DT;
-
-      let hit = false;
-      for (const p of Object.values(room.players)) {
-        if (p.id === b.ownerId || p.hp <= 0) continue;
-        const dx = p.x - b.x;
-        const dy = p.y - b.y;
-        if (dx*dx + dy*dy <= (PLAYER_RADIUS+BULLET_RADIUS)**2) {
-          p.hp -= BULLET_DAMAGE;
-
-if (p.hp <= 0) {
-  p.hp = 0;
-  p.alive = false;
-  p.score++;
-
-
-            const killer = room.players[b.ownerId];
-            if (killer) {
-              (async () => {
-                try {
-                  const [victimUser, killerUser] = await Promise.all([
-                    User.findOne({ username: p.name }),
-                    User.findOne({ username: killer.name })
-                  ]);
-                  if (victimUser && killerUser) {
-                    victimUser.elo = Math.max(0, (victimUser.elo ?? 1000) - 10);
-                    killerUser.elo = (killerUser.elo ?? 1000) + 10;
-                    victimUser.rank = getRank(victimUser.elo);
-                    killerUser.rank = getRank(killerUser.elo);
-                    await victimUser.save();
-                    await killerUser.save();
-
-                    p.elo = victimUser.elo;
-                    p.rank = victimUser.rank;
-                    killer.elo = killerUser.elo;
-                    killer.rank = killerUser.rank;
-                  }
-                } catch (err) {
-                  console.error("ELO update error:", err);
-                }
-})();
-
-    const alivePlayers = Object.values(room.players).filter(pp => pp.alive);
-    if (alivePlayers.length === 1) {
-      startNextRound(room, alivePlayers[0].id);
+  socket.on("disconnect", () => {
+    for (let code in rooms) {
+      delete rooms[code].players[socket.id];
+      io.to(code).emit("roomUpdate", rooms[code]);
     }
-  }
-}
-          hit = true;
-          break;
-        }
-      }
-
-      if (!hit) alive.push(b);
-    }
-    room.bullets = alive;
-
-
-const timeLeft = Math.max(0, Math.floor((room.roundEndTime - Date.now()) / 1000));
-io.to(room.code).emit("roundState", {
-  round: room.round,
-  timeLeft,
-  wins: room.roundWins
+  });
 });
 
-if (timeLeft === 0) {
-  startNextRound(room, null);
-}
-const timeLeft = Math.max(
-  0,
-  Math.floor((room.roundEndTime - Date.now()) / 1000)
-);
-
-io.to(room.code).emit("roundState", {
-  round: room.round,
-  timeLeft,
-  wins: room.roundWins
-});
-
-// timeout draw
-if (timeLeft === 0) {
-  startNextRound(room, null);
-}
-
-io.to(room.code).emit("gameState", {
-
-      players: Object.values(room.players),
-      bullets: room.bullets,
-      arena: { width: ARENA_WIDTH, height: ARENA_HEIGHT }
-    });
-  }
-}, 1000 / TICK_RATE);
-
-server.listen(PORT, () => {
-  console.log("Rivals 2 server listening on", PORT);
-});
+server.listen(process.env.PORT || 3000);
