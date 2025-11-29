@@ -1,6 +1,6 @@
 
 {
-  "name": "multiplayer-3d-baseplate",
+  "name": "multiplayer-3d-game",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {

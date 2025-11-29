@@ -3,11 +3,19 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: #0f172a;
+  background: #020617;
+  color: white;
+  font-family: sans-serif;
 }
 
-canvas {
-  width: 100vw;
-  height: 100vh;
-  display: block;
+#ui {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+}
+
+button {
+  padding: 10px 16px;
+  margin-right: 8px;
 }
